@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.env
+*.db
+*.db-journal
+.DS_Store
+Thumbs.db
+coverage/
+client/dist/
+server/data/
+.vite/
+*.log
+
+# Freebuff workspace state
+.freebuff/

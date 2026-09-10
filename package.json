@@ -1,0 +1,17 @@
+{
+  "name": "bhaav",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Write normally. We'll tell you what your hands already know.",
+  "scripts": {
+    "dev": "concurrently -n server,client -c amber,teal \"npm run dev --prefix server\" \"npm run dev --prefix client\"",
+    "seed": "npm run seed --prefix server",
+    "test": "npm run test --prefix server && npm run test --prefix client",
+    "lint": "npm run lint --prefix server && npm run lint --prefix client",
+    "build": "npm run build --prefix client",
+    "start": "npm run start --prefix server"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2"
+  }
+}
