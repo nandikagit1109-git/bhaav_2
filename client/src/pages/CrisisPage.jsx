@@ -28,6 +28,14 @@ const HELPLINES = [
     region: 'India — National',
   },
   {
+    name: 'NIMHANS',
+    number: '080-46110007',
+    available: '24/7',
+    description: 'National Institute of Mental Health and Neurosciences, Bengaluru — India\'s premier psychiatric institution.',
+    url: 'https://nimhans.ac.in/',
+    region: 'India — National',
+  },
+  {
     name: 'iCall',
     number: '9152987821',
     available: 'Mon–Sat, 8am–10pm',
@@ -42,6 +50,38 @@ const HELPLINES = [
     description: 'Volunteer-based crisis intervention and suicide prevention helpline.',
     url: 'http://www.aasra.info/',
     region: 'India — National',
+  },
+  {
+    name: 'Sangath',
+    number: '9663595988',
+    available: '24/7',
+    description: 'Mental health research and support organisation with a focus on young people.',
+    url: 'https://sangath.in/',
+    region: 'India — National',
+  },
+  {
+    name: 'Connecting Trust',
+    number: '1800-843-4353',
+    available: '24/7, toll-free',
+    description: 'Mumbai-based trust offering crisis support for those who have lost someone to suicide.',
+    url: 'https://connectingngo.org/',
+    region: 'India — National',
+  },
+  {
+    name: 'The Banyan',
+    number: '044-26530504',
+    available: 'Mon–Sat, 9am–6pm',
+    description: 'Chennai-based organisation supporting people with mental health challenges and homelessness.',
+    url: 'https://www.banyan.org.in/',
+    region: 'India — Chennai',
+  },
+  {
+    name: 'COOJ Mental Health',
+    number: '0832-2252525',
+    available: 'Mon–Sat, 10am–8pm',
+    description: 'Goa-based mental health foundation providing counselling and crisis support.',
+    url: 'https://cooj.in/',
+    region: 'India — Goa',
   },
 ];
 
