@@ -34,7 +34,7 @@ const LEVELS = [
   },
 ];
 
-export default function SettingsModal({ isOpen, onClose, onDataReset }) {
+export default function SettingsModal({ isOpen, onClose, onDataReset, onNavigate }) {
   const [settings, setSettings] = useState({
     supportLevel: 'suggestions',
     trustedName: '',
@@ -215,6 +215,13 @@ export default function SettingsModal({ isOpen, onClose, onDataReset }) {
             </div>
           </div>
         )}
+
+        {/* Crisis support link */}
+        <div className="pt-2 border-t border-stone-border/60">
+          <p className="text-[11px] text-ink-400">
+            In crisis? <button onClick={() => { onClose(); if (onNavigate) onNavigate('crisis'); }} className="text-accent-terracotta hover:underline font-medium">Get help now</button> — Tele-MANAS 14416 (24/7)
+          </p>
+        </div>
 
         <div className="flex justify-end pt-2 border-t border-stone-border/60">
           <button

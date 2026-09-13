@@ -104,9 +104,26 @@ export default function DashboardPage({ onNavigateToJournal, onOpenPrivacyModal 
 
       {/* ——— The thin data layer ——— */}
       {isLoading ? (
-        <div className="mt-16 space-y-3">
-          <div className="analyzing-line w-full" />
-          <span className="eyebrow">Analyzing your rhythm</span>
+        <div className="mt-16 space-y-8 animate-pulse">
+          {/* Skeleton: stat row */}
+          <div className="pt-6 border-t border-stone-border flex flex-wrap gap-x-12 gap-y-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="space-y-2">
+                <div className="h-3 w-20 bg-ink-200/60 rounded" />
+                <div className="h-5 w-28 bg-ink-200/40 rounded" />
+              </div>
+            ))}
+          </div>
+          {/* Skeleton: chart area */}
+          <div className="h-48 bg-ink-100/50 rounded-lg border border-stone-border/50" />
+          {/* Skeleton: insight card */}
+          <div className="h-32 bg-ink-100/50 rounded-lg border border-stone-border/50" />
+          {/* Skeleton: session rows */}
+          <div className="space-y-3">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="h-10 bg-ink-100/40 rounded border border-stone-border/30" />
+            ))}
+          </div>
         </div>
       ) : loadError ? (
         <div className="mt-16 border border-accent-terracotta/30 bg-accent-terracottaLight/40 p-6">

@@ -7,6 +7,10 @@ export default function TrustedContactModal({ isOpen, onClose, contactName = 'Sa
   );
   const [isEditing, setIsEditing] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [nameError, setNameError] = useState('');
+  const [phoneError, setPhoneError] = useState('');
+  const [contactNameLocal, setContactNameLocal] = useState(contactName || '');
+  const [contactPhone, setContactPhone] = useState('');
 
   if (!isOpen) return null;
 
@@ -39,6 +43,39 @@ export default function TrustedContactModal({ isOpen, onClose, contactName = 'Sa
           <h3 className="font-serif text-2xl sm:text-3xl text-ink-950">Reach out on your terms.</h3>
           <p className="text-xs sm:text-sm text-ink-600">
             A gentle pre-drafted message to share with someone you trust when your rhythm feels heavier.
+          </p>
+        </div>
+
+        {/* Contact details with validation */}
+        <div className="space-y-3">
+          <div>
+            <label className="text-xs text-ink-500 font-mono block mb-1">CONTACT NAME *</label>
+            <input
+              type="text"
+              value={contactNameLocal}
+              onChange={(e) => { setContactNameLocal(e.target.value); setNameError(''); }}
+              placeholder="Their name"
+              className={`w-full px-3 py-2 bg-paper-100 border text-sm text-ink-900 focus:outline-none focus:ring-1 focus:ring-ink-900 ${
+                nameError ? 'border-accent-terracotta' : 'border-stone-border'
+              }`}
+            />
+            {nameError && <p className="text-[11px] text-accent-terracotta mt-1">{nameError}</p>}
+          </div>
+          <div>
+            <label className="text-xs text-ink-500 font-mono block mb-1">PHONE (OPTIONAL)</label>
+            <input
+              type="tel"
+              value={contactPhone}
+              onChange={(e) => { setContactPhone(e.target.value); setPhoneError(''); }}
+              placeholder="+91 98765 43210"
+              className={`w-full px-3 py-2 bg-paper-100 border text-sm text-ink-900 focus:outline-none focus:ring-1 focus:ring-ink-900 ${
+                phoneError ? 'border-accent-terracotta' : 'border-stone-border'
+              }`}
+            />
+            {phoneError && <p className="text-[11px] text-accent-terracotta mt-1">{phoneError}</p>}
+          </div>
+          <p className="text-[10px] text-ink-400">
+            We read every message, typically within 2-3 days during the hackathon period.
           </p>
         </div>
 

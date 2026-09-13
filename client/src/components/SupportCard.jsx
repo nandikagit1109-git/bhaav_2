@@ -130,6 +130,9 @@ export default function SupportCard({ onDismiss, onOpenTrustedContact }) {
                 <ChevronRight className="w-3 h-3" />
               </button>
             )}
+            <p className="text-[10px] text-ink-400 mt-3">
+              We read every message, typically within 2-3 days during the hackathon period.
+            </p>
           </div>
         </div>
       </div>

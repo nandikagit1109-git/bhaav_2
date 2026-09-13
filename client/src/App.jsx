@@ -7,6 +7,7 @@ import JournalPage from './pages/JournalPage';
 import DashboardPage from './pages/DashboardPage';
 import CampusPulsePage from './pages/CampusPulsePage';
 import PrivacyPage from './pages/PrivacyPage';
+import CrisisPage from './pages/CrisisPage';
 import PrivacyModal from './components/PrivacyModal';
 import SettingsModal from './components/SettingsModal';
 import TechArchitectureModal from './components/TechArchitectureModal';
@@ -37,9 +38,18 @@ export default function App() {
     setSessionRefreshKey(prev => prev + 1);
   };
 
+  // Dynamic SEO titles per route
   useEffect(() => {
-    document.title = 'Bhaav — Write normally. We\u2019ll tell you what your hands already know.';
-  }, []);
+    const titles = {
+      home: "Bhaav \u2014 Write normally. We\u2019ll tell you what your hands already know.",
+      journal: "Bhaav \u2014 Write normally.",
+      dashboard: "Bhaav \u2014 The line you walk.",
+      campus: "Bhaav \u2014 Campus Pulse.",
+      privacy: "Bhaav \u2014 Privacy by architecture.",
+      crisis: "Bhaav \u2014 Crisis support.",
+    };
+    document.title = titles[currentView] || titles.home;
+  }, [currentView]);
 
   const pageVariants = {
     initial: reduced ? { opacity: 1 } : { opacity: 0, y: 14 },
@@ -97,6 +107,10 @@ export default function App() {
             {currentView === 'privacy' && (
               <PrivacyPage onNavigate={handleNavigate} />
             )}
+
+            {currentView === 'crisis' && (
+              <CrisisPage onNavigate={handleNavigate} />
+            )}
           </motion.div>
         </AnimatePresence>
       </main>
@@ -120,6 +134,7 @@ export default function App() {
             <button onClick={() => handleNavigate('privacy')} className="ink-link">Privacy</button>
             <button onClick={() => setIsTechModalOpen(true)} className="ink-link">How it works</button>
             <button onClick={() => setIsSettingsModalOpen(true)} className="ink-link">Settings</button>
+            <button onClick={() => handleNavigate('crisis')} className="ink-link text-accent-terracotta">Crisis support</button>
           </nav>
         </div>
         <div className="max-w-6xl mx-auto px-5 sm:px-8 pb-8">
@@ -139,6 +154,7 @@ export default function App() {
         isOpen={isSettingsModalOpen}
         onClose={() => setIsSettingsModalOpen(false)}
         onDataReset={handleDataReset}
+        onNavigate={handleNavigate}
       />
 
       <TechArchitectureModal

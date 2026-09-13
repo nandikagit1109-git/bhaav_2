@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CheckCircle2, Download, Trash2, RefreshCw, AlertTriangle } from 'lucide-react';
+import { CheckCircle2, Download, Trash2, RefreshCw, AlertTriangle, Bot } from 'lucide-react';
 import { exportUserData, deleteUserData, reseedDemoData } from '../api/client';
 import { FadeUp, SectionMark, InkRule } from '../motion/primitives';
 
@@ -75,6 +75,83 @@ export default function PrivacyPage({ onNavigate }) {
           Privacy here is not a policy. It is the shape of the database — there is simply no
           column where your words could live.
         </p>
+      </FadeUp>
+
+      {/* ——— Plain-language Privacy Policy ——— */}
+      <FadeUp delay={0.25} className="mt-16">
+        <span className="eyebrow text-accent-terracotta">Privacy policy</span>
+        <h2 className="font-serif text-2xl sm:text-3xl text-ink-950 mt-4">
+          What we collect, and why.
+        </h2>
+        <div className="mt-8 space-y-6 text-sm text-ink-700 leading-relaxed max-w-2xl">
+          <div>
+            <h3 className="font-serif text-lg text-ink-950 mb-2">What we collect</h3>
+            <p>
+              Bhaav collects only typing behavior metadata — how fast you type, how long you pause,
+              how often you correct yourself, and the overall rhythm of your writing. We never collect
+              the actual text you write, the content of your journal, or any personal information beyond
+              a randomly generated user identifier stored in your browser.
+            </p>
+          </div>
+          <div>
+            <h3 className="font-serif text-lg text-ink-950 mb-2">How long we keep it</h3>
+            <p>
+              Your data is stored locally in our server{'’'}s database as long as your account exists.
+              You can delete everything at any time from the Privacy page or Settings. When you delete,
+              all sessions, your baseline, insights, and preferences are permanently removed.
+            </p>
+          </div>
+          <div>
+            <h3 className="font-serif text-lg text-ink-950 mb-2">Your rights</h3>
+            <p>
+              You can export all data Bhaav holds about you at any time. You can delete everything.
+              You can change your support level or opt out of Campus Pulse at any time. You are always
+              in control.
+            </p>
+          </div>
+          <div>
+            <h3 className="font-serif text-lg text-ink-950 mb-2">What this is not</h3>
+            <p>
+              Bhaav is a self-awareness tool, not a medical device. It does not diagnose mental health
+              conditions, does not provide clinical advice, and is not a replacement for professional
+              care. If you are in crisis, please visit our <button onClick={() => onNavigate && onNavigate('crisis')} className="text-accent-terracotta hover:underline">crisis support page</button> or call a helpline directly.
+            </p>
+          </div>
+        </div>
+      </FadeUp>
+
+      <InkRule className="my-14" />
+
+      {/* ——— AI Disclosure ——— */}
+      <FadeUp>
+        <div className="bg-ink-950 text-paper-100 p-8 sm:p-10">
+          <div className="flex items-center gap-2 eyebrow text-paper-100/60 mb-4">
+            <Bot className="w-4 h-4" />
+            <span>How Bhaav uses AI</span>
+          </div>
+          <h2 className="font-serif text-2xl sm:text-3xl text-paper-100">
+            AI-generated insights, honestly disclosed.
+          </h2>
+          <div className="mt-6 space-y-4 text-sm text-paper-100/80 leading-relaxed max-w-2xl">
+            <p>
+              Bhaav uses an AI model (Anthropic{'’'}s Claude) to generate your weekly observation and
+              suggestion. The AI receives only your aggregate behavioral metrics — typing speed,
+              pause patterns, correction rate, and timing variability — along with your deviation
+              score. It never receives your journal text, individual characters, or any content.
+            </p>
+            <p>
+              The AI{'’'}s output is an observation, not a diagnosis. It is generated from aggregate
+              statistics, not from reading your writing. If the AI service is unavailable, Bhaav
+              generates a deterministic fallback insight from your actual metrics — the product
+              never breaks.
+            </p>
+            <p>
+              AI-generated insights are not clinical advice. They are designed to help you notice
+              patterns in your own behavior. If you need support, please reach out to a qualified
+              professional or visit our <button onClick={() => onNavigate && onNavigate('crisis')} className="text-paper-100 underline hover:text-paper-50">crisis support page</button>.
+            </p>
+          </div>
+        </div>
       </FadeUp>
 
       {statusMessage && (
@@ -168,7 +245,6 @@ export default function PrivacyPage({ onNavigate }) {
         )}
       </FadeUp>
 
-      <InkRule className="my-16" />
 
       {/* ——— Honesty ——— */}
       <FadeUp>

@@ -173,12 +173,15 @@ export default function Navbar({
               </motion.button>
             </nav>
 
-            <div className="px-6 pb-10 flex items-center gap-6 font-mono text-[10px] uppercase tracking-[0.16em] text-ink-500">
+            <div className="px-6 pb-10 flex flex-wrap items-center gap-6 font-mono text-[10px] uppercase tracking-[0.16em] text-ink-500">
               <button onClick={() => { setMenuOpen(false); onOpenPrivacyModal(); }} className="ink-link">
                 What Bhaav stores
               </button>
               <button onClick={() => { setMenuOpen(false); onOpenTechModal(); }} className="ink-link">
                 Architecture
+              </button>
+              <button onClick={() => { setMenuOpen(false); onNavigate('crisis'); }} className="ink-link text-accent-terracotta">
+                Crisis support
               </button>
             </div>
           </motion.div>

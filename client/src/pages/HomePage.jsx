@@ -1,6 +1,6 @@
-import React, { useRef } from 'react';
-import { motion, useScroll, useTransform, useReducedMotion } from 'framer-motion';
-import { ArrowUpRight, ArrowDown } from 'lucide-react';
+import React, { useRef, useState, useEffect } from 'react';
+import { motion, useScroll, useTransform, useReducedMotion, AnimatePresence } from 'framer-motion';
+import { ArrowUpRight, ArrowDown, ChevronDown } from 'lucide-react';
 import TheLineYouWalkHero from '../components/TheLineYouWalkHero';
 import {
   FadeUp,
@@ -565,6 +565,117 @@ function ChapterEnd({ onNavigate }) {
   );
 }
 
+/* ————————————————— FAQ ————————————————— */
+
+const FAQ_ITEMS = [
+  {
+    q: 'Does Bhaav read what I write?',
+    a: 'No. Bhaav never sees, stores, or transmits your journal text. It only measures behavioral metadata — typing speed, pause patterns, correction rate, and timing variability — all computed locally in your browser. Your words exist only in the textarea and vanish the moment you end a session.',
+  },
+  {
+    q: 'How much support can I choose?',
+    a: 'Three levels, and you can change anytime. Awareness only (just the data), Awareness + suggestions (weekly observations you can try or ignore), or Awareness + connection (a pre-drafted note you can share with someone you trust). You are always in control.',
+  },
+  {
+    q: 'Is this a replacement for therapy?',
+    a: 'No. Bhaav is a self-awareness tool, not a clinical instrument. It does not diagnose conditions, provide therapy, or replace professional care. It helps you notice your own patterns — nothing more.',
+  },
+  {
+    q: 'What happens to my data?',
+    a: 'Your typing metadata is stored in our server database. You can export everything at any time to verify — you will find zero bytes of journal text. You can also delete everything permanently from Settings or the Privacy page.',
+  },
+  {
+    q: 'Is it free?',
+    a: 'Yes. Bhaav is free to use. There are no hidden costs, no premium tiers, and no ads.',
+  },
+];
+
+function ChapterFAQ() {
+  const [openIdx, setOpenIdx] = useState(null);
+  return (
+    <section className="py-28 sm:py-40">
+      <SectionMark index="10" label="Questions" />
+      <div className="mt-10 sm:mt-16">
+        <RevealWords
+          as="h2"
+          text="Frequently asked questions."
+          className="text-display-section font-serif uppercase text-ink-950 max-w-4xl"
+        />
+      </div>
+      <div className="mt-12 border-t border-stone-border">
+        {FAQ_ITEMS.map((item, i) => (
+          <FadeUp key={i} delay={0.05 * i}>
+            <div className="border-b border-stone-border">
+              <button
+                onClick={() => setOpenIdx(openIdx === i ? null : i)}
+                className="w-full text-left py-5 flex items-center justify-between gap-4 group"
+                aria-expanded={openIdx === i}
+              >
+                <span className="font-serif text-lg sm:text-xl text-ink-950 group-hover:text-accent-terracotta transition-colors">
+                  {item.q}
+                </span>
+                <motion.span
+                  animate={{ rotate: openIdx === i ? 180 : 0 }}
+                  transition={{ duration: 0.3 }}
+                  className="flex-shrink-0 text-ink-400"
+                >
+                  <ChevronDown className="w-5 h-5" />
+                </motion.span>
+              </button>
+              <AnimatePresence>
+                {openIdx === i && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+                    className="overflow-hidden"
+                  >
+                    <p className="text-sm text-ink-600 leading-relaxed pb-6 max-w-2xl">
+                      {item.a}
+                    </p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          </FadeUp>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/* ————————————————— STICKY MOBILE CTA ————————————————— */
+
+function StickyMobileCTA({ onNavigate }) {
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setVisible(window.scrollY > window.innerHeight * 0.6);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+  return (
+    <AnimatePresence>
+      {visible && (
+        <motion.div
+          initial={{ y: 80, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: 80, opacity: 0 }}
+          transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
+          className="fixed bottom-0 inset-x-0 z-40 sm:hidden bg-paper-100/95 backdrop-blur-md border-t border-stone-border/70 p-4"
+        >
+          <button
+            onClick={() => onNavigate('journal')}
+            className="w-full btn-ink justify-center"
+          >
+            Start writing <ArrowUpRight className="w-3.5 h-3.5" />
+          </button>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+}
+
 /* ————————————————— PAGE ————————————————— */
 
 export default function HomePage({ onNavigate, onOpenSettings, onOpenHowItWorks }) {
@@ -659,6 +770,8 @@ export default function HomePage({ onNavigate, onOpenSettings, onOpenHowItWorks 
         <InkRule />
         <ChapterCampus onNavigate={onNavigate} />
         <InkRule />
+        <ChapterFAQ />
+        <InkRule />
       </div>
 
       <MarqueeBand
@@ -674,6 +787,9 @@ export default function HomePage({ onNavigate, onOpenSettings, onOpenHowItWorks 
       <div className="max-w-6xl mx-auto px-5 sm:px-8">
         <ChapterEnd onNavigate={onNavigate} />
       </div>
+
+      {/* ——— Sticky mobile CTA ——— */}
+      <StickyMobileCTA onNavigate={onNavigate} />
     </div>
   );
 }
