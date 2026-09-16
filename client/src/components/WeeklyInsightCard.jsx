@@ -2,6 +2,7 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, useMotionValue, useTransform, animate, useReducedMotion } from 'framer-motion';
 import { submitInsightFeedback } from '../api/client';
 import { FadeUp } from '../motion/primitives';
+import InsightActivity from './InsightActivity';
 
 /**
  * WalkTheDot — interactive drag feedback replacing three buttons.
@@ -326,12 +327,11 @@ export default function WeeklyInsightCard({ insight, onFeedbackUpdated }) {
           &ldquo;{insight.observation}&rdquo;
         </blockquote>
 
-        <div className="mt-8 max-w-2xl">
-          <span className="eyebrow text-ink-400">Try this</span>
-          <p className="text-sm sm:text-base text-ink-700 leading-relaxed mt-2">
-            {insight.suggestion}
-          </p>
-        </div>
+        {/* Interactive micro-activity (replaces static suggestion text) */}
+        <InsightActivity
+          insight={insight}
+          onActivityComplete={() => {/* activity done, feedback still available below */}}
+        />
 
         {/* The feedback moment — Walk the dot */}
         <div className="mt-12 pt-8 border-t border-stone-border">
