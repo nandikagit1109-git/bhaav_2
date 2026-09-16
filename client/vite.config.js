@@ -16,4 +16,6 @@ export default defineConfig({
   test: {
     environment: 'node',
   },
+  // Production: Vercel rewrites handle /api proxying to the backend
+  // The client always uses relative /api paths, so no base URL needed
 });

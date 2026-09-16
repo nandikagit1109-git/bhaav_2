@@ -1,0 +1,45 @@
+# Render Blueprint — Bhaav Backend
+# Deploy with: render blueprint deploy
+# Or connect the GitHub repo in the Render dashboard and use this file.
+
+services:
+  # ── Backend API ────────────────────────────────────────────────
+  - type: web
+    name: bhaav-api
+    runtime: node
+    plan: free
+    rootDir: server
+    buildCommand: npm install
+    startCommand: node src/index.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: bhaav-db
+          property: connectionString
+      - key: REDIS_URL
+        fromRedis:
+          name: bhaav-cache
+          property: connectionString
+      - key: CLIENT_ORIGIN
+        value: https://bhaav.vercel.app
+      - key: ANTHROPIC_API_KEY
+        sync: false  # Set manually in Render dashboard
+      - key: NODE_ENV
+        value: production
+      - key: DEMO_SEED
+        value: true
+
+# ── PostgreSQL Database ──────────────────────────────────────────
+databases:
+  - name: bhaav-db
+    plan: free
+    databaseName: bhaav
+    ipAllowList: []  # Only internal connections (same region)
+
+# ── Redis Cache ──────────────────────────────────────────────────
+# Render's managed Redis (free tier: 25MB)
+redis:
+  - name: bhaav-cache
+    plan: free
+    ipAllowList: []
