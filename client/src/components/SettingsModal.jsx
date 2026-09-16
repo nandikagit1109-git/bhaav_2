@@ -13,7 +13,8 @@ import {
   updateSettings,
   exportUserData,
   deleteUserData,
-  reseedDemoData
+  reseedDemoData,
+  setCampusPulseOptIn,
 } from '../api/client';
 
 const LEVELS = [
@@ -43,12 +44,23 @@ export default function SettingsModal({ isOpen, onClose, onDataReset, onNavigate
   });
   const [statusMessage, setStatusMessage] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [campusPulseOptIn, setCampusPulseOptInState] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
       fetchSettings().then(res => {
         if (res.settings) setSettings(res.settings);
       }).catch(() => {});
+    }
+  }, [isOpen]);
+
+  // Load campus pulse opt-in status from the users table
+  useEffect(() => {
+    if (isOpen) {
+      fetch('/api/campus-pulse/peer-count/demo')
+        .then(r => r.json())
+        .then(d => setCampusPulseOptInState(!!d.opted_in))
+        .catch(() => { /* silent */ });
     }
   }, [isOpen]);
 
@@ -154,6 +166,39 @@ export default function SettingsModal({ isOpen, onClose, onDataReset, onNavigate
               </button>
             ))}
           </div>
+        </div>
+
+        {/* Campus Pulse opt-in */}
+        <div className="pt-4 border-t border-stone-border/60 space-y-3">
+          <div className="font-serif text-lg text-ink-950">Anonymous peer awareness</div>
+          <p className="text-xs text-ink-500">
+            See how many people felt a similar shift this week. No names, no profiles, no way to view or contact anyone.
+          </p>
+          <button
+            onClick={async () => {
+              const next = !campusPulseOptIn;
+              try {
+                await setCampusPulseOptIn(next);
+                setCampusPulseOptInState(next);
+              } catch (_) { /* silent */ }
+            }}
+            className="flex items-center gap-3 w-full text-left py-2"
+          >
+            <span
+              aria-hidden="true"
+              className={`w-10 h-5 rounded-full relative transition-colors ${campusPulseOptIn ? 'bg-accent-terracotta' : 'bg-ink-300'}`}
+            >
+              <span
+                className={`absolute top-0.5 w-4 h-4 rounded-full bg-paper-50 shadow-sm transition-transform ${campusPulseOptIn ? 'translate-x-5' : 'translate-x-0.5'}`}
+              />
+            </span>
+            <span className="text-xs font-mono text-ink-600">
+              {campusPulseOptIn ? 'On — you’ll see your peer count on the dashboard' : 'Off — your data stays private'}
+            </span>
+          </button>
+          <p className="text-[11px] text-ink-400">
+            This must always be a deliberate choice. You can turn it off at any time.
+          </p>
         </div>
 
         {/* Data management */}

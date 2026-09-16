@@ -251,6 +251,23 @@ export async function reseedDemoData() {
   return res.json();
 }
 
+// ── Campus Pulse Peer Count ────────────────────────
+export async function fetchPeerCount(userId) {
+  const res = await fetch(`${API_BASE}/campus-pulse/peer-count/${encodeURIComponent(userId)}`);
+  if (!res.ok) throw new Error('Failed to fetch peer count');
+  return res.json();
+}
+
+export async function setCampusPulseOptIn(optIn) {
+  const res = await fetch(`${API_BASE}/settings/campus-pulse-opt-in`, {
+    method: 'POST',
+    headers: userHeaders(),
+    body: JSON.stringify({ opt_in: optIn }),
+  });
+  if (!res.ok) throw new Error('Failed to update campus pulse opt-in');
+  return res.json();
+}
+
 // ── Data Management ─────────────────────────────────
 export async function exportUserData() {
   const res = await fetch(`${API_BASE}/export`, { headers: userHeaders() });

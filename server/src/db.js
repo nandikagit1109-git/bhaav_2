@@ -8,7 +8,8 @@ const require = createRequire(import.meta.url);
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY,
-  created_at TEXT NOT NULL
+  created_at TEXT NOT NULL,
+  campus_pulse_opt_in INTEGER DEFAULT 0
 );
 CREATE TABLE IF NOT EXISTS settings (
   user_id TEXT PRIMARY KEY,
@@ -62,6 +63,11 @@ export async function createDatabase(filePath) {
     db = new SQL.Database();
   }
   db.run(SCHEMA);
+
+  // Migration: add campus_pulse_opt_in column to existing databases
+  try {
+    db.run("ALTER TABLE users ADD COLUMN campus_pulse_opt_in INTEGER DEFAULT 0");
+  } catch (_) { /* column already exists */ }
 
   function persist() {
     if (!filePath) return;

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import TrendChart from '../components/TrendChart';
 import WeeklyInsightCard from '../components/WeeklyInsightCard';
+import PeerCountCard from '../components/PeerCountCard';
 import { InkPath } from '../motion/primitives';
 import {
   fetchSessions,
@@ -170,6 +171,11 @@ export default function DashboardPage({ onNavigateToJournal, onOpenPrivacyModal 
               baseline={baseline}
               onNavigateToJournal={onNavigateToJournal}
             />
+          </section>
+
+          {/* ——— You're not alone ——— */}
+          <section className="mt-20">
+            <PeerCountCard onOpenSettings={() => {}} />
           </section>
 
           {/* ——— Weekly insight ——— */}

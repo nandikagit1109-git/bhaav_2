@@ -5,7 +5,7 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import { createDatabase, rowToSession } from "./db.js";
-import { buildBaseline, campusAggregate, scoreSession, weekStart } from "./stats.js";
+import { buildBaseline, campusAggregate, scoreSession, weekStart, HIGH_DEVIATION } from "./stats.js";
 import { generateInsight } from "./insights.js";
 import { assertUserId, sanitizeSession } from "./validate.js";
 import { seedDatabase } from "./seed.js";
@@ -393,6 +393,89 @@ export function createApp(database) {
     res.status(500).json({ error: "Unexpected error" });
   });
 
+  // ── Campus Pulse: per-user opt-in for anonymous peer-count stat ──────
+  // This toggle must always be a deliberate user action from a clearly
+  // worded settings toggle, never bundled into another consent flow.
+  app.post("/api/settings/campus-pulse-opt-in", (req, res) => {
+    try {
+      const userId = userIdFrom(req);
+      ensureUser(database, userId);
+      const optIn = req.body?.opt_in === true ? 1 : 0;
+      database.run("UPDATE users SET campus_pulse_opt_in = ? WHERE id = ?", [optIn, userId]);
+      res.json({ ok: true, campus_pulse_opt_in: optIn });
+    } catch (error) {
+      res.status(error.status || 500).json({ error: error.status ? error.message : "Unable to update campus pulse opt-in" });
+    }
+  });
+
+  // ── Campus Pulse: anonymous peer-count for opted-in users ────────────
+  // Returns how many OTHER opted-in users this week fall in the same
+  // deviation tier — never a count of users, never a list, never a match.
+  // K_ANONYMITY_FLOOR enforced: if fewer than MIN_GROUP_SIZE peers share
+  // the tier, we return insufficient_data instead of a number.
+  app.get("/api/campus-pulse/peer-count/:userId", (req, res) => {
+    try {
+      const requestingUserId = assertUserId(req.params.userId);
+
+      // (a) Look up the requesting user — must be opted in
+      const user = database.get("SELECT campus_pulse_opt_in FROM users WHERE id = ?", [requestingUserId]);
+      if (!user || !user.campus_pulse_opt_in) {
+        return res.json({ opted_in: false });
+      }
+
+      // (b) Compute this user's most recent session z-deviation
+      const latestSession = database.get(
+        "SELECT deviation FROM sessions WHERE user_id = ? AND deviation IS NOT NULL ORDER BY created_at DESC",
+        [requestingUserId],
+      );
+      if (!latestSession) {
+        return res.json({ opted_in: true, insufficient_data: true });
+      }
+
+      const z = latestSession.deviation;
+
+      // (c) Bucket into tier using the same thresholds as stats.js HIGH_DEVIATION
+      //     normal: z < 1.0,  moderate: 1.0 <= z < HIGH_DEVIATION,  high: z >= HIGH_DEVIATION
+      let tier;
+      if (z >= HIGH_DEVIATION) tier = "high";
+      else if (z >= 1.0) tier = "moderate";
+      else tier = "normal";
+
+      // (d) Count OTHER opted-in users this week in the same tier
+      const week = weekStart(new Date().toISOString());
+      const tierRows = database.all(
+        `SELECT s.user_id, s.deviation
+         FROM sessions s
+         JOIN users u ON u.id = s.user_id
+         WHERE u.campus_pulse_opt_in = 1
+           AND s.user_id != ?
+           AND s.deviation IS NOT NULL
+           AND s.created_at >= ?`,
+        [requestingUserId, week],
+      );
+
+      let peerCount = 0;
+      for (const row of tierRows) {
+        const dz = row.deviation;
+        let rowTier;
+        if (dz >= HIGH_DEVIATION) rowTier = "high";
+        else if (dz >= 1.0) rowTier = "moderate";
+        else rowTier = "normal";
+        if (rowTier === tier) peerCount++;
+      }
+
+      // (e) K-anonymity floor
+      if (peerCount < MIN_GROUP_SIZE) {
+        return res.json({ opted_in: true, insufficient_data: true });
+      }
+
+      // (f) Return the anonymised stat
+      res.json({ opted_in: true, insufficient_data: false, peer_count: peerCount, tier });
+    } catch (error) {
+      res.status(error.status || 500).json({ error: error.status ? error.message : "Peer count unavailable" });
+    }
+  });
+
   return app;
 }
 
@@ -401,6 +484,11 @@ const isMain = process.argv[1] && path.normalize(process.argv[1]) === fileURLToP
 if (isMain) {
   const dataFile = path.join(path.dirname(fileURLToPath(import.meta.url)), "../data/bhaav.sqlite");
   const database = await createDatabase(dataFile);
+
+  // Migration: add campus_pulse_opt_in to existing users tables
+  try {
+    database.run("ALTER TABLE users ADD COLUMN campus_pulse_opt_in INTEGER DEFAULT 0");
+  } catch (_) { /* column already exists */ }
   if (process.env.DEMO_SEED !== "false") {
     const count = database.get("SELECT COUNT(*) as n FROM sessions");
     if (!count?.n) seedDatabase(database);
