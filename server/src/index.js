@@ -5,6 +5,7 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import { createDatabase, rowToSession, closeDatabase } from "./pg.js";
+import { createDatabase as createSqliteDatabase } from "./db.js";
 import { buildBaseline, campusAggregate, scoreSession, weekStart, HIGH_DEVIATION } from "./stats.js";
 import { generateInsight } from "./insights.js";
 import { assertUserId, sanitizeSession } from "./validate.js";
@@ -104,7 +105,7 @@ export async function createApp(database) {
   });
 
   // ── Auth routes (no auth required) ────────────────────────────
-  const authRouter = await createAuthRouter(database);
+  const authRouter = createAuthRouter(database);
   app.use("/api/auth", authRouter);
 
   // ── Health check (no rate limit) ──────────────────────────────
@@ -532,9 +533,12 @@ export async function createApp(database) {
 const isMain = process.argv[1] && path.normalize(process.argv[1]) === fileURLToPath(import.meta.url);
 
 if (isMain) {
-  // Initialize PostgreSQL and Redis
-  const database = await createDatabase();
-  await initCache();
+  // Use PostgreSQL if DATABASE_URL is set, otherwise fall back to SQLite
+  const usePg = !!process.env.DATABASE_URL;
+  const database = usePg ? await createDatabase() : await createSqliteDatabase(
+    path.join(path.dirname(fileURLToPath(import.meta.url)), "../data/bhaav.sqlite")
+  );
+  if (usePg) await initCache();
 
   // Seed demo data if database is empty (and DEMO_SEED != "false")
   if (process.env.DEMO_SEED !== "false") {
@@ -542,7 +546,7 @@ if (isMain) {
     if (!count?.n) await seedDatabase(database);
   }
 
-  const app = createApp(database);
+  const app = await createApp(database);
   const server = app.listen(PORT, () => {
     process.stdout.write(`Bhaav listening on ${PORT}\n`);
   });

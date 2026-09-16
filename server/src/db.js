@@ -1,7 +1,16 @@
+// ═══════════════════════════════════════════════════════════════════
+// BHAAV — Database Adapter
+//
+// If DATABASE_URL is set → uses PostgreSQL (via pg.js)
+// If DATABASE_URL is not set → uses SQLite (sql.js, in-memory or file)
+//
+// This lets developers run locally without PostgreSQL while the
+// production deployment uses PG.
+// ═══════════════════════════════════════════════════════════════════
+
 import fs from "node:fs";
 import path from "node:path";
 import { createRequire } from "node:module";
-import initSqlJs from "sql.js";
 
 const require = createRequire(import.meta.url);
 
@@ -9,7 +18,11 @@ const SCHEMA = `
 CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY,
   created_at TEXT NOT NULL,
-  campus_pulse_opt_in INTEGER DEFAULT 0
+  campus_pulse_opt_in INTEGER DEFAULT 0,
+  email TEXT UNIQUE,
+  password_hash TEXT,
+  display_name TEXT NOT NULL DEFAULT '',
+  email_verified INTEGER NOT NULL DEFAULT 0
 );
 CREATE TABLE IF NOT EXISTS settings (
   user_id TEXT PRIMARY KEY,
@@ -52,6 +65,7 @@ CREATE TABLE IF NOT EXISTS feedback (
 `;
 
 export async function createDatabase(filePath) {
+  const initSqlJs = (await import("sql.js")).default;
   const SQL = await initSqlJs({
     locateFile: (file) => path.join(path.dirname(require.resolve("sql.js")), file),
   });
@@ -69,14 +83,38 @@ export async function createDatabase(filePath) {
     db.run("ALTER TABLE users ADD COLUMN campus_pulse_opt_in INTEGER DEFAULT 0");
   } catch (_) { /* column already exists */ }
 
+  // Migration: add auth columns
+  try {
+    db.run("ALTER TABLE users ADD COLUMN email TEXT");
+  } catch (_) { /* column already exists */ }
+  try {
+    db.run("ALTER TABLE users ADD COLUMN password_hash TEXT");
+  } catch (_) { /* column already exists */ }
+  try {
+    db.run("ALTER TABLE users ADD COLUMN display_name TEXT NOT NULL DEFAULT ''");
+  } catch (_) { /* column already exists */ }
+  try {
+    db.run("ALTER TABLE users ADD COLUMN email_verified INTEGER NOT NULL DEFAULT 0");
+  } catch (_) { /* column already exists */ }
+
   function persist() {
     if (!filePath) return;
     fs.mkdirSync(path.dirname(filePath), { recursive: true });
     fs.writeFileSync(filePath, Buffer.from(db.export()));
   }
 
+  // Convert PostgreSQL-specific syntax to SQLite
+  function adaptQuery(sql) {
+    return sql
+      .replace(/\$(\d+)/g, '?')  // $1 → ?
+      .replace(/::int/g, '')       // remove ::int casts
+      .replace(/::text/g, '')      // remove ::text casts
+      .replace(/ON CONFLICT \([^)]+\) DO NOTHING/g, '')  // remove ON CONFLICT clauses
+      .replace(/RETURNING [^;]+/g, '');  // remove RETURNING clauses
+  }
+
   function all(sql, params = []) {
-    const stmt = db.prepare(sql);
+    const stmt = db.prepare(adaptQuery(sql));
     stmt.bind(params);
     const rows = [];
     while (stmt.step()) rows.push(stmt.getAsObject());
@@ -89,7 +127,7 @@ export async function createDatabase(filePath) {
   }
 
   function run(sql, params = []) {
-    db.run(sql, params);
+    db.run(adaptQuery(sql), params);
     persist();
   }
 
@@ -112,4 +150,8 @@ export function rowToSession(row) {
     dominantFeature: row.dominant_feature,
     highDeviation: Boolean(row.high_deviation),
   };
+}
+
+export async function closeDatabase() {
+  // SQLite: no-op (db persists to file)
 }
