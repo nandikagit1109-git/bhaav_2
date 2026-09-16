@@ -5,6 +5,11 @@
 
 const API_BASE = '/api';
 
+// Token management — reads from localStorage
+function getToken() {
+  return localStorage.getItem('bhaav-token');
+}
+
 /* ── Deviation scale ─────────────────────────────────────────────────
  * The server computes deviation as the root-mean-square of z-scores across
  * the five behavioral features — i.e. distance in σ units (0–8, "high"
@@ -27,7 +32,10 @@ export function scoreToSigma(score) {
 }
 
 function userHeaders() {
-  return { 'Content-Type': 'application/json' };
+  const headers = { 'Content-Type': 'application/json' };
+  const token = getToken();
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+  return headers;
 }
 
 // ── Health ──────────────────────────────────────────

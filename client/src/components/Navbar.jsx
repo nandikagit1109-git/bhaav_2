@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowUpRight, ShieldCheck, SlidersHorizontal } from 'lucide-react';
+import { ArrowUpRight, ShieldCheck, SlidersHorizontal, LogOut } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
 import { EASE } from '../motion/primitives';
 
 const NAV_LINKS = [
@@ -17,6 +18,7 @@ export default function Navbar({
   onOpenSettingsModal,
   onOpenTechModal,
 }) {
+  const { user, logout } = useAuth();
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -84,6 +86,22 @@ export default function Navbar({
 
           {/* Right controls */}
           <div className="flex items-center gap-1.5 sm:gap-3">
+            {/* User name + logout */}
+            {user && (
+              <div className="hidden sm:flex items-center gap-2 mr-2">
+                <span className="font-mono text-[10px] uppercase tracking-wider text-ink-400">
+                  {user.displayName || user.email}
+                </span>
+                <button
+                  onClick={logout}
+                  className="p-1.5 text-ink-400 hover:text-accent-terracotta transition-colors"
+                  aria-label="Sign out"
+                  title="Sign out"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
             <button
               onClick={onOpenPrivacyModal}
               className="hidden lg:inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-ink-500 hover:text-ink-950 transition-colors"
@@ -182,6 +200,9 @@ export default function Navbar({
               </button>
               <button onClick={() => { setMenuOpen(false); onNavigate('crisis'); }} className="ink-link text-accent-terracotta">
                 Crisis support
+              </button>
+              <button onClick={() => { setMenuOpen(false); logout(); }} className="ink-link">
+                Sign out
               </button>
             </div>
           </motion.div>

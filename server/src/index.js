@@ -16,6 +16,8 @@ import {
   feedbackRateLimit,
   generalWriteRateLimit,
 } from "./middleware/rateLimit.js";
+import { requireAuth } from "./middleware/auth.js";
+import { createAuthRouter } from "./routes/auth.js";
 
 dotenv.config({ path: path.join(path.dirname(fileURLToPath(import.meta.url)), "../../.env") });
 
@@ -24,6 +26,9 @@ const PORT = Number(process.env.PORT || 8787);
 const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || "http://localhost:5173";
 
 function userIdFrom(req) {
+  // Use authenticated user ID from JWT (set by requireAuth middleware)
+  if (req.userId) return req.userId;
+  // Fallback for backward compatibility (demo mode)
   return assertUserId(req.header("x-bhaav-user") || "demo");
 }
 
@@ -82,7 +87,7 @@ async function getBaselineCached(db, userId, sessions) {
   return baseline;
 }
 
-export function createApp(database) {
+export async function createApp(database) {
   const app = express();
   app.disable("x-powered-by");
   app.use(express.json({ limit: "32kb" }));
@@ -97,6 +102,10 @@ export function createApp(database) {
     res.setHeader("Cache-Control", "no-store");
     next();
   });
+
+  // ── Auth routes (no auth required) ────────────────────────────
+  const authRouter = await createAuthRouter(database);
+  app.use("/api/auth", authRouter);
 
   // ── Health check (no rate limit) ──────────────────────────────
   app.get("/api/health", (_req, res) => {
@@ -134,7 +143,7 @@ export function createApp(database) {
   });
 
   // ── State: sessions + baseline + insight + settings ───────────
-  app.get("/api/state", async (req, res) => {
+  app.get("/api/state", requireAuth, async (req, res) => {
     try {
       const userId = userIdFrom(req);
       await ensureUser(database, userId);
@@ -179,8 +188,8 @@ export function createApp(database) {
     }
   });
 
-  // ── Session recording (rate-limited) ──────────────────────────
-  app.post("/api/sessions", sessionRateLimit, async (req, res) => {
+  // ── Session recording (rate-limited, auth required) ───────────
+  app.post("/api/sessions", requireAuth, sessionRateLimit, async (req, res) => {
     try {
       const userId = userIdFrom(req);
       await ensureUser(database, userId);
@@ -226,8 +235,8 @@ export function createApp(database) {
     }
   });
 
-  // ── Weekly insight (rate-limited, may call LLM) ───────────────
-  app.post("/api/insights/weekly", insightRateLimit, async (req, res) => {
+  // ── Weekly insight (rate-limited, auth required) ───────────────
+  app.post("/api/insights/weekly", requireAuth, insightRateLimit, async (req, res) => {
     try {
       const userId = userIdFrom(req);
       await ensureUser(database, userId);
@@ -286,8 +295,8 @@ export function createApp(database) {
     }
   });
 
-  // ── Feedback (rate-limited) ───────────────────────────────────
-  app.post("/api/feedback", feedbackRateLimit, async (req, res) => {
+  // ── Feedback (rate-limited, auth required) ────────────────────
+  app.post("/api/feedback", requireAuth, feedbackRateLimit, async (req, res) => {
     try {
       const userId = userIdFrom(req);
       const allowed = ["a_little", "not_really", "not_sure"];
@@ -320,8 +329,8 @@ export function createApp(database) {
     }
   });
 
-  // ── Settings ──────────────────────────────────────────────────
-  app.put("/api/settings", generalWriteRateLimit, async (req, res) => {
+  // ── Settings (auth required) ──────────────────────────────────
+  app.put("/api/settings", requireAuth, generalWriteRateLimit, async (req, res) => {
     try {
       const userId = userIdFrom(req);
       await ensureUser(database, userId);
@@ -342,8 +351,8 @@ export function createApp(database) {
     }
   });
 
-  // ── Campus Pulse (aggregate) ──────────────────────────────────
-  app.get("/api/campus", async (req, res) => {
+  // ── Campus Pulse (aggregate, auth required) ──────────────────
+  app.get("/api/campus", requireAuth, async (req, res) => {
     try {
       userIdFrom(req);
       const rows = (
@@ -371,8 +380,8 @@ export function createApp(database) {
     }
   });
 
-  // ── Data export ───────────────────────────────────────────────
-  app.get("/api/export", async (req, res) => {
+  // ── Data export (auth required) ───────────────────────────────
+  app.get("/api/export", requireAuth, async (req, res) => {
     try {
       const userId = userIdFrom(req);
       const sessions = await sessionsFor(database, userId);
@@ -410,8 +419,8 @@ export function createApp(database) {
     }
   });
 
-  // ── Delete all user data ──────────────────────────────────────
-  app.delete("/api/me", generalWriteRateLimit, async (req, res) => {
+  // ── Delete all user data (auth required) ──────────────────────
+  app.delete("/api/me", requireAuth, generalWriteRateLimit, async (req, res) => {
     try {
       const userId = userIdFrom(req);
       await database.run("DELETE FROM feedback WHERE user_id = $1", [userId]);
@@ -426,8 +435,8 @@ export function createApp(database) {
     }
   });
 
-  // ── Demo seed ─────────────────────────────────────────────────
-  app.post("/api/demo/seed", generalWriteRateLimit, async (req, res) => {
+  // ── Demo seed (auth required) ─────────────────────────────────
+  app.post("/api/demo/seed", requireAuth, generalWriteRateLimit, async (req, res) => {
     try {
       userIdFrom(req);
       await invalidateAllBaselines();
@@ -442,8 +451,8 @@ export function createApp(database) {
     res.status(500).json({ error: "Unexpected error" });
   });
 
-  // ── Campus Pulse: per-user opt-in ─────────────────────────────
-  app.post("/api/settings/campus-pulse-opt-in", generalWriteRateLimit, async (req, res) => {
+  // ── Campus Pulse: per-user opt-in (auth required) ─────────────
+  app.post("/api/settings/campus-pulse-opt-in", requireAuth, generalWriteRateLimit, async (req, res) => {
     try {
       const userId = userIdFrom(req);
       await ensureUser(database, userId);
@@ -455,8 +464,8 @@ export function createApp(database) {
     }
   });
 
-  // ── Campus Pulse: anonymous peer-count ────────────────────────
-  app.get("/api/campus-pulse/peer-count/:userId", async (req, res) => {
+  // ── Campus Pulse: anonymous peer-count (auth required) ────────
+  app.get("/api/campus-pulse/peer-count/:userId", requireAuth, async (req, res) => {
     try {
       const requestingUserId = assertUserId(req.params.userId);
 

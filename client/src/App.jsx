@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Navbar from './components/Navbar';
 import CustomCursor from './components/CustomCursor';
+import AuthPage from './pages/AuthPage';
 import HomePage from './pages/HomePage';
 import JournalPage from './pages/JournalPage';
 import DashboardPage from './pages/DashboardPage';
@@ -14,6 +16,15 @@ import TechArchitectureModal from './components/TechArchitectureModal';
 import { EASE } from './motion/primitives';
 
 export default function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
+  );
+}
+
+function AppContent() {
+  const { isAuthenticated, loading } = useAuth();
   const [currentView, setCurrentView] = useState('home');
   const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
@@ -56,6 +67,23 @@ export default function App() {
     animate: { opacity: 1, y: 0 },
     exit: reduced ? { opacity: 0 } : { opacity: 0, y: -10 },
   };
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-paper-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-ink-300 border-t-ink-900 rounded-full animate-spin mx-auto" />
+          <p className="mt-4 text-ink-400 font-mono text-xs uppercase tracking-wider">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show auth page if not authenticated
+  if (!isAuthenticated) {
+    return <AuthPage />;
+  }
 
   return (
     <div className="min-h-screen bg-paper-100 text-ink-900 flex flex-col font-sans paper-grain">
