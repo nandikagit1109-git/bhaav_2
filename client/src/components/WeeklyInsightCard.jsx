@@ -44,9 +44,9 @@ export default function WeeklyInsightCard({ insight, onFeedbackUpdated }) {
 
   return (
     <FadeUp>
-      <div>
+      <div className="gradient-card-coral glow-coral rounded-xl p-6">
         <div className="flex items-baseline justify-between gap-4">
-          <span className="eyebrow text-accent-pop">This week</span>
+          <span className="eyebrow text-accent-coral">This week</span>
           <span className="eyebrow text-ink-400">
             {insight.source === 'fallback' ? 'deterministic fallback' : 'observation'}
           </span>

@@ -35,6 +35,16 @@
   --color-accent-ochre: #A8842C;
   --color-accent-ochreLight: #F4ECD8;
   --color-accent-pop: #E0552F;
+  --color-accent-coral: #FF6B4A;
+  --color-accent-coralLight: #FFF0EC;
+  --color-accent-indigo: #4F46E5;
+  --color-accent-indigoLight: #EEF2FF;
+  --color-accent-amber: #F59E0B;
+  --color-accent-amberLight: #FFFBEB;
+  --color-accent-rose: #F43F5E;
+  --color-accent-roseLight: #FFF1F2;
+  --color-accent-sky: #0EA5E9;
+  --color-accent-skyLight: #F0F9FF;
 
   --font-serif: 'Newsreader', Georgia, serif;
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -313,6 +323,18 @@
   background: #1E1B16;
   color: #E0552F;
 }
+.marquee-coral {
+  background: linear-gradient(90deg, #FF6B4A, #E0552F);
+  color: #FBF9F4;
+}
+.marquee-indigo {
+  background: #4F46E5;
+  color: #EEF2FF;
+}
+.marquee-amber {
+  background: #F59E0B;
+  color: #1E1B16;
+}
 .marquee-track {
   display: flex;
   width: max-content;
@@ -321,6 +343,54 @@
 @keyframes marqueeScroll {
   to { transform: translateX(-50%); }
 }
+
+/* ——— Colorful gradient cards ——— */
+.gradient-card-coral {
+  background: linear-gradient(135deg, #FFF0EC 0%, #FFE4DB 50%, #FDDCCC 100%);
+  border: 1px solid rgba(255, 107, 74, 0.2);
+}
+.gradient-card-indigo {
+  background: linear-gradient(135deg, #EEF2FF 0%, #E0E7FF 50%, #D6DEFF 100%);
+  border: 1px solid rgba(79, 70, 229, 0.2);
+}
+.gradient-card-amber {
+  background: linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 50%, #FDE68A 100%);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+}
+.gradient-card-sage {
+  background: linear-gradient(135deg, #EAF0EA 0%, #D5E5D5 50%, #C8DEC8 100%);
+  border: 1px solid rgba(90, 122, 98, 0.2);
+}
+.gradient-card-rose {
+  background: linear-gradient(135deg, #FFF1F2 0%, #FFE4E6 50%, #FECDD3 100%);
+  border: 1px solid rgba(244, 63, 94, 0.2);
+}
+.gradient-card-sky {
+  background: linear-gradient(135deg, #F0F9FF 0%, #E0F2FE 50%, #BAE6FD 100%);
+  border: 1px solid rgba(14, 165, 233, 0.2);
+}
+
+/* ——— Colorful hover glow ——— */
+.glow-coral { transition: box-shadow 0.3s, transform 0.3s; }
+.glow-coral:hover { box-shadow: 0 8px 32px -8px rgba(255, 107, 74, 0.35); transform: translateY(-2px); }
+.glow-indigo { transition: box-shadow 0.3s, transform 0.3s; }
+.glow-indigo:hover { box-shadow: 0 8px 32px -8px rgba(79, 70, 229, 0.35); transform: translateY(-2px); }
+.glow-amber { transition: box-shadow 0.3s, transform 0.3s; }
+.glow-amber:hover { box-shadow: 0 8px 32px -8px rgba(245, 158, 11, 0.35); transform: translateY(-2px); }
+.glow-sage { transition: box-shadow 0.3s, transform 0.3s; }
+.glow-sage:hover { box-shadow: 0 8px 32px -8px rgba(90, 122, 98, 0.35); transform: translateY(-2px); }
+.glow-rose { transition: box-shadow 0.3s, transform 0.3s; }
+.glow-rose:hover { box-shadow: 0 8px 32px -8px rgba(244, 63, 94, 0.35); transform: translateY(-2px); }
+.glow-sky { transition: box-shadow 0.3s, transform 0.3s; }
+.glow-sky:hover { box-shadow: 0 8px 32px -8px rgba(14, 165, 233, 0.35); transform: translateY(-2px); }
+
+/* ——— Colorful section accents ——— */
+.accent-bar-coral { border-left: 3px solid #FF6B4A; padding-left: 1rem; }
+.accent-bar-indigo { border-left: 3px solid #4F46E5; padding-left: 1rem; }
+.accent-bar-amber { border-left: 3px solid #F59E0B; padding-left: 1rem; }
+.accent-bar-sage { border-left: 3px solid #5A7A62; padding-left: 1rem; }
+.accent-bar-rose { border-left: 3px solid #F43F5E; padding-left: 1rem; }
+.accent-bar-sky { border-left: 3px solid #0EA5E9; padding-left: 1rem; }
 
 /* ——— Respect prefers-reduced-motion ——— */
 @media (prefers-reduced-motion: reduce) {

@@ -3,6 +3,7 @@ import {
   ResponsiveContainer,
   ComposedChart,
   Line,
+  Area,
   XAxis,
   YAxis,
   Tooltip,
@@ -18,6 +19,8 @@ const CORRIDOR = '#EFE9DD';
 const SAGE = '#5A7A62';
 const OCHRE = '#A8842C';
 const TERRACOTTA = '#B45A3C';
+const CORAL = '#FF6B4A';
+const INDIGO = '#4F46E5';
 const PAPER = '#FBF9F4';
 
 function CustomTooltip({ active, payload }) {
@@ -150,13 +153,26 @@ export default function TrendChart({ sessions = [], className = 'w-full', onNavi
               width={48}
             />
             <Tooltip content={<CustomTooltip />} cursor={{ stroke: HAIRLINE, strokeWidth: 1 }} />
+            <defs>
+              <linearGradient id="inkGradient" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={CORAL} stopOpacity={0.15} />
+                <stop offset="100%" stopColor={INDIGO} stopOpacity={0.03} />
+              </linearGradient>
+            </defs>
+            <Area
+              type="monotone"
+              dataKey="deviation_score"
+              fill="url(#inkGradient)"
+              stroke="none"
+              animationDuration={900}
+            />
             <Line
               type="monotone"
               dataKey="deviation_score"
               stroke={INK}
               strokeWidth={1.6}
               dot={<CustomDot />}
-              activeDot={{ r: 5, stroke: PAPER, strokeWidth: 1.5, fill: INK }}
+              activeDot={{ r: 5, stroke: PAPER, strokeWidth: 1.5, fill: CORAL }}
               animationDuration={900}
               animationEasing="ease-out"
             />

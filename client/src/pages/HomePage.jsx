@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import { motion, useScroll, useTransform, useReducedMotion, AnimatePresence } from 'framer-motion';
+import { motion, useScroll, useMotionValueEvent, useReducedMotion, AnimatePresence } from 'framer-motion';
 import { ArrowUpRight, ArrowDown, ChevronDown } from 'lucide-react';
 import TheLineYouWalkHero from '../components/TheLineYouWalkHero';
 import {
@@ -61,11 +61,11 @@ function ChapterQuestion() {
 /* ————————————————— CHAPTER 03 — the five signals ————————————————— */
 
 const SIGNALS = [
-  { n: '01', name: 'Typing speed', note: 'How fast your hands move when they move.' },
-  { n: '02', name: 'Pause rhythm', note: 'The length of the silences between words.' },
-  { n: '03', name: 'Pause variation', note: 'Whether those silences are steady or scattered.' },
-  { n: '04', name: 'Corrections', note: 'How often you go back and take words away.' },
-  { n: '05', name: 'Timing variability', note: 'The overall irregularity of your cadence.' },
+  { n: '01', name: 'Typing speed', note: 'How fast your hands move when they move.', color: 'accent-bar-coral', dot: 'bg-accent-coral' },
+  { n: '02', name: 'Pause rhythm', note: 'The length of the silences between words.', color: 'accent-bar-indigo', dot: 'bg-accent-indigo' },
+  { n: '03', name: 'Pause variation', note: 'Whether those silences are steady or scattered.', color: 'accent-bar-amber', dot: 'bg-accent-amber' },
+  { n: '04', name: 'Corrections', note: 'How often you go back and take words away.', color: 'accent-bar-rose', dot: 'bg-accent-rose' },
+  { n: '05', name: 'Timing variability', note: 'The overall irregularity of your cadence.', color: 'accent-bar-sky', dot: 'bg-accent-sky' },
 ];
 
 function ChapterSignals() {
@@ -103,10 +103,12 @@ function ChapterSignals() {
                   aria-hidden="true"
                   className="hidden lg:block absolute -top-11 left-0 w-px h-8 bg-ink-300"
                 />
-                <span className="absolute -top-[3.42rem] left-[-2.5px] hidden lg:block w-1.5 h-1.5 rounded-full bg-accent-terracotta" />
-                <div className="eyebrow text-ink-400">{s.n}</div>
-                <h3 className="font-serif text-xl sm:text-2xl text-ink-950 mt-1.5">{s.name}</h3>
-                <p className="text-xs text-ink-500 leading-relaxed mt-2 max-w-[16rem]">{s.note}</p>
+                <span className={`absolute -top-[3.42rem] left-[-2.5px] hidden lg:block w-1.5 h-1.5 rounded-full ${s.dot}`} />
+                <div className={`${s.color} rounded-lg py-3 pl-4 pr-3 bg-paper-50/80`}>                  
+                  <div className="eyebrow text-ink-400">{s.n}</div>
+                  <h3 className="font-serif text-xl sm:text-2xl text-ink-950 mt-1.5">{s.name}</h3>
+                  <p className="text-xs text-ink-500 leading-relaxed mt-2 max-w-[16rem]">{s.note}</p>
+                </div>
               </FadeUp>
             ))}
           </div>
@@ -223,11 +225,23 @@ function ChapterBaseline() {
     offset: ['start start', 'end end'],
   });
 
-  const o0 = useTransform(scrollYProgress, [0, 0.2, 0.3], [1, 1, 0]);
-  const o1 = useTransform(scrollYProgress, [0.22, 0.32, 0.45, 0.55], [0, 1, 1, 0]);
-  const o2 = useTransform(scrollYProgress, [0.47, 0.57, 0.7, 0.8], [0, 1, 1, 0]);
-  const o3 = useTransform(scrollYProgress, [0.72, 0.82, 1], [0, 1, 1]);
-  const opacities = [o0, o1, o2, o3];
+  /* FIX v2: instead of crossfading opacity between four always-mounted,
+     absolutely-positioned layers (which requires perfectly matched
+     boundary values to avoid a shared visibility window), only ONE stage
+     is ever mounted at a time. AnimatePresence with mode="wait" makes
+     Framer Motion fully finish the outgoing stage's exit animation before
+     the incoming stage even begins mounting — overlap becomes structurally
+     impossible rather than dependent on precise numeric tuning. */
+  const [activeStage, setActiveStage] = useState(0);
+
+  useMotionValueEvent(scrollYProgress, 'change', (latest) => {
+    if (latest < 0.25) setActiveStage(0);
+    else if (latest < 0.5) setActiveStage(1);
+    else if (latest < 0.75) setActiveStage(2);
+    else setActiveStage(3);
+  });
+
+  const stage = STAGES[activeStage];
 
   return (
     <section ref={ref} className="relative" style={{ height: reduced ? 'auto' : '320vh' }}>
@@ -235,38 +249,40 @@ function ChapterBaseline() {
         <div className="w-full max-w-6xl mx-auto px-5 sm:px-8">
           <SectionMark index="04" label="How it reads you" />
           <div className="mt-12 grid lg:grid-cols-2 gap-14 lg:gap-20 items-center">
-            {/* Stacked statements crossfaded by scroll */}
-            <div className="relative">
-              {STAGES.map((s, i) => (
+            {/* Text — min-height reserves room for the longest stage so the
+               layout never jumps as content swaps. Adjust in-browser if
+               stage 4's heading + note still clips at your real font sizes. */}
+            <div className="relative min-h-[18rem] sm:min-h-[16rem]">
+              <AnimatePresence mode="wait">
                 <motion.div
-                  key={s.mark}
-                  style={reduced ? { position: 'static', display: i === 0 ? 'block' : 'none' } : { opacity: opacities[i] }}
-                  className={reduced ? '' : 'absolute inset-0'}
+                  key={reduced ? 'static-text' : activeStage}
+                  initial={reduced ? false : { opacity: 0, y: 18 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -18 }}
+                  transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
                 >
-                  <div className="eyebrow text-accent-terracotta">{s.mark}</div>
-                  <h3 className="text-display-statement font-serif text-ink-950 mt-3">{s.line}</h3>
-                  <p className="text-sm text-ink-600 leading-relaxed mt-5 max-w-md">{s.note}</p>
+                  <div className="eyebrow text-accent-terracotta">{stage.mark}</div>
+                  <h3 className="text-display-statement font-serif text-ink-950 mt-3">{stage.line}</h3>
+                  <p className="text-sm text-ink-600 leading-relaxed mt-5 max-w-md">{stage.note}</p>
                 </motion.div>
-              ))}
-              {/* Reserve height so absolute layers don't collapse */}
-              {!reduced && <div aria-hidden="true" className="invisible">
-                <div className="eyebrow">Placeholder</div>
-                <h3 className="text-display-statement font-serif">Placeholder line</h3>
-              </div>}
+              </AnimatePresence>
             </div>
 
-            {/* Stage art */}
-            <div className="relative">
-              {STAGES.map((_, i) => (
+            {/* Stage art — same single-mount pattern, kept in sync with the
+               text since both key off the same activeStage value. */}
+            <div className="relative min-h-[7rem] flex items-center">
+              <AnimatePresence mode="wait">
                 <motion.div
-                  key={i}
-                  style={reduced ? { display: (reduced ? i === 3 : i === 0) ? 'block' : 'none' } : { opacity: opacities[i] }}
-                  className={reduced ? '' : 'absolute inset-0 flex items-center'}
+                  key={reduced ? 'static-art' : activeStage}
+                  initial={reduced ? false : { opacity: 0, y: 18 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -18 }}
+                  transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                  className="w-full"
                 >
-                  <BaselineStageArt stage={i} />
+                  <BaselineStageArt stage={activeStage} />
                 </motion.div>
-              ))}
-              {!reduced && <div aria-hidden="true" className="invisible h-28" />}
+              </AnimatePresence>
             </div>
           </div>
         </div>
@@ -357,9 +373,11 @@ function ChapterDecide({ onOpenSettings }) {
       </div>
 
       <div className="mt-16 border-t border-stone-border">
-        {LEVELS.map((l, i) => (
+        {LEVELS.map((l, i) => {
+          const colors = ['accent-bar-coral', 'accent-bar-amber', 'accent-bar-indigo'];
+          return (
           <FadeUp key={l.n} delay={0.1 * i}>
-            <div className="group grid grid-cols-[3rem_1fr] sm:grid-cols-[5rem_16rem_1fr] gap-4 sm:gap-8 items-baseline py-7 border-b border-stone-border">
+            <div className={`group grid grid-cols-[3rem_1fr] sm:grid-cols-[5rem_16rem_1fr] gap-4 sm:gap-8 items-baseline py-7 border-b border-stone-border ${colors[i]} rounded-r-lg`}>              
               <span className="eyebrow text-ink-400">{l.n}</span>
               <h3 className="font-serif text-2xl sm:text-3xl text-ink-950 transition-transform duration-300 group-hover:translate-x-1">
                 {l.name}
@@ -367,7 +385,7 @@ function ChapterDecide({ onOpenSettings }) {
               <p className="text-sm text-ink-600 leading-relaxed max-w-md col-start-2 sm:col-start-auto">{l.note}</p>
             </div>
           </FadeUp>
-        ))}
+        );})}
       </div>
 
       <FadeUp delay={0.3} className="mt-10">
@@ -408,31 +426,33 @@ function ChapterPrivacy({ onNavigate }) {
           accent={['yours']}
           className="text-display-section font-serif uppercase text-ink-950 max-w-4xl"
         />
-      </div>
-
-      <div className="mt-16 grid md:grid-cols-2 gap-12 md:gap-20">
+      </div>          <div className="mt-16 grid md:grid-cols-2 gap-12 md:gap-20">
         <FadeUp>
-          <div className="eyebrow text-accent-sage">Stored</div>
-          <ul className="mt-6">
-            {STORED.map((item) => (
-              <li key={item} className="font-mono text-xs sm:text-sm text-ink-700 py-3 border-t border-stone-border flex items-center gap-3">
-                <span className="w-1 h-1 rounded-full bg-accent-sage flex-shrink-0" aria-hidden="true" />
-                {item}
-              </li>
-            ))}
-          </ul>
+          <div className="gradient-card-sage rounded-xl p-6">
+            <div className="eyebrow text-accent-sage">Stored</div>
+            <ul className="mt-6">
+              {STORED.map((item) => (
+                <li key={item} className="font-mono text-xs sm:text-sm text-ink-700 py-3 border-t border-accent-sage/20 flex items-center gap-3">
+                  <span className="w-1.5 h-1.5 rounded-full bg-accent-sage flex-shrink-0" aria-hidden="true" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
         </FadeUp>
 
         <FadeUp delay={0.15}>
-          <div className="eyebrow text-ink-400">Never stored</div>
-          <ul className="mt-6">
-            {NOT_STORED.map((item) => (
-              <li key={item} className="font-mono text-xs sm:text-sm text-ink-400 line-through decoration-ink-300 py-3 border-t border-stone-border/70 flex items-center gap-3">
-                <span className="w-1 h-1 rounded-full bg-ink-300 flex-shrink-0" aria-hidden="true" />
-                {item}
-              </li>
-            ))}
-          </ul>
+          <div className="gradient-card-rose rounded-xl p-6">
+            <div className="eyebrow text-accent-rose">Never stored</div>
+            <ul className="mt-6">
+              {NOT_STORED.map((item) => (
+                <li key={item} className="font-mono text-xs sm:text-sm text-ink-500 line-through decoration-accent-rose/40 py-3 border-t border-accent-rose/20 flex items-center gap-3">
+                  <span className="w-1.5 h-1.5 rounded-full bg-accent-rose flex-shrink-0" aria-hidden="true" />
+                  {item}
+                </li>
+              ))}
+            </ul>
+          </div>
         </FadeUp>
       </div>
 
@@ -784,6 +804,15 @@ export default function HomePage({ onNavigate, onOpenSettings, onOpenHowItWorks 
         ]}
       />
 
+      <MarqueeBand
+        items={[
+          'Private by design',
+          'No mood ratings',
+          'Your rhythm, your story',
+          'Anonymous campus pulse',
+        ]}
+      />
+
       <div className="max-w-6xl mx-auto px-5 sm:px-8">
         <ChapterEnd onNavigate={onNavigate} />
       </div>
@@ -792,4 +821,4 @@ export default function HomePage({ onNavigate, onOpenSettings, onOpenHowItWorks 
       <StickyMobileCTA onNavigate={onNavigate} />
     </div>
   );
-}
+}                                                                       

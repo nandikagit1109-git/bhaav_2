@@ -139,26 +139,29 @@ export default function DashboardPage({ onNavigateToJournal, onOpenPrivacyModal 
         </div>
       ) : (
         <>
-          <div className="mt-12 pt-6 border-t border-stone-border flex flex-wrap items-baseline gap-x-12 gap-y-3">
-            <span className="eyebrow">
-              Latest deviation
-              <span className={`ml-2 font-mono text-sm tracking-normal ${latestSession ? devBadge(latestSession.deviation_score).text : 'text-ink-400'}`}>
-                {latestSession ? `${Math.round(latestSession.deviation_score)} / 100` : '—'}
-              </span>
-            </span>
-            <span className="eyebrow">
-              Sessions
-              <span className="ml-2 font-mono text-sm tracking-normal text-ink-950">{sessions.length}</span>
-            </span>
-            <span className="eyebrow">
-              Your baseline
-              <span className="ml-2 font-mono text-sm tracking-normal text-ink-950">
-                {baseline ? `${Math.round(baseline.mean_speed)} wpm \u00B7 ${Math.round(baseline.mean_pause)}ms pause` : 'forming'}
-              </span>
-            </span>
+          <div className="mt-12 grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="gradient-card-coral glow-coral rounded-xl p-5">
+              <span className="eyebrow text-accent-coral">Latest deviation</span>
+              <div className={`font-serif text-3xl mt-2 ${latestSession ? devBadge(latestSession.deviation_score).text : 'text-ink-400'}`}>
+                {latestSession ? `${Math.round(latestSession.deviation_score)}` : '—'}
+                <span className="text-lg text-ink-400 ml-1">/ 100</span>
+              </div>
+            </div>
+            <div className="gradient-card-indigo glow-indigo rounded-xl p-5">
+              <span className="eyebrow text-accent-indigo">Sessions</span>
+              <div className="font-serif text-3xl mt-2 text-ink-950">{sessions.length}</div>
+            </div>
+            <div className="gradient-card-sage glow-sage rounded-xl p-5">
+              <span className="eyebrow text-accent-sage">Your baseline</span>
+              <div className="font-serif text-lg mt-2 text-ink-800">
+                {baseline ? `${Math.round(baseline.mean_speed)} wpm · ${Math.round(baseline.mean_pause)}ms` : 'forming'}
+              </div>
+            </div>
+          </div>
+          <div className="mt-4 flex justify-end">
             <button
               onClick={onOpenPrivacyModal}
-              className="eyebrow ink-link ml-auto hidden sm:inline-block"
+              className="eyebrow ink-link"
             >
               What Bhaav stores
             </button>

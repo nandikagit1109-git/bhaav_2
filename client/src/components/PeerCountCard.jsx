@@ -36,8 +36,8 @@ export default function PeerCountCard({ onOpenSettings: _onOpenSettings }) {
   // Not opted in — gentle, one-time invite
   if (!data.opted_in) {
     return (
-      <div className="border border-stone-border/60 rounded-xl p-5 bg-paper-50">
-        <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-400 mb-2">
+      <div className="gradient-card-sky glow-sky rounded-xl p-5">
+        <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-accent-sky mb-2">
           You&rsquo;re not alone
         </p>
         <p className="text-sm text-ink-600 leading-relaxed">
@@ -73,8 +73,8 @@ export default function PeerCountCard({ onOpenSettings: _onOpenSettings }) {
   // Opted in but not enough data
   if (data.insufficient_data) {
     return (
-      <div className="border border-stone-border/60 rounded-xl p-5 bg-paper-50">
-        <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-400 mb-2">
+      <div className="gradient-card-amber glow-amber rounded-xl p-5">
+        <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-accent-amber mb-2">
           You&rsquo;re not alone
         </p>
         <p className="text-sm text-ink-600 leading-relaxed">
@@ -86,7 +86,7 @@ export default function PeerCountCard({ onOpenSettings: _onOpenSettings }) {
             try {
               await setCampusPulseOptIn(false);
               setDismissed(true);
-            } catch (_) {}
+            } catch (_) { /* silent */ }
             setToggling(false);
           }}
           disabled={toggling}
@@ -101,9 +101,12 @@ export default function PeerCountCard({ onOpenSettings: _onOpenSettings }) {
   // Real peer count returned
   const tierLabel = data.tier === 'high' ? 'a noticeable shift' : data.tier === 'moderate' ? 'a slight shift' : 'little deviation';
 
+  const tierColor = data.tier === 'high' ? 'gradient-card-rose glow-rose' : data.tier === 'moderate' ? 'gradient-card-amber glow-amber' : 'gradient-card-sage glow-sage';
+  const tierTextColor = data.tier === 'high' ? 'text-accent-rose' : data.tier === 'moderate' ? 'text-accent-amber' : 'text-accent-sage';
+
   return (
-    <div className="border border-stone-border/60 rounded-xl p-5 bg-paper-50">
-      <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-400 mb-2">
+    <div className={`${tierColor} rounded-xl p-5`}>
+      <p className={`font-mono text-[11px] uppercase tracking-[0.14em] ${tierTextColor} mb-2`}>
         You&rsquo;re not alone
       </p>
       <p className="text-sm text-ink-700 leading-relaxed">
@@ -119,7 +122,7 @@ export default function PeerCountCard({ onOpenSettings: _onOpenSettings }) {
           try {
             await setCampusPulseOptIn(false);
             setDismissed(true);
-          } catch (_) {}
+          } catch (_) { /* silent */ }
           setToggling(false);
         }}
         disabled={toggling}
