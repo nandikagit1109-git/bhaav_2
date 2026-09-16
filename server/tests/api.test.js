@@ -1,8 +1,14 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { createDatabase } from "../src/db.js";
+import { createDatabase, closeDatabase } from "../src/pg.js";
 import { createApp } from "../src/index.js";
 import { seedDatabase } from "../src/seed.js";
+
+// ── Test database setup ──────────────────────────────────────────
+// Tests require a running PostgreSQL instance. Set TEST_DATABASE_URL
+// to a test database (separate from production). If not set, tests
+// fall back to the main DATABASE_URL (ensure it's safe to wipe).
+const TEST_DB_URL = process.env.TEST_DATABASE_URL || process.env.DATABASE_URL;
 
 async function listen(app) {
   return new Promise((resolve) => {
@@ -17,14 +23,17 @@ async function listen(app) {
 }
 
 async function withServer(fn) {
+  // Override DATABASE_URL for the test database
+  process.env.DATABASE_URL = TEST_DB_URL;
   const database = await createDatabase();
-  seedDatabase(database);
+  await seedDatabase(database);
   const app = createApp(database);
   const { server, url } = await listen(app);
   try {
     await fn(url, database);
   } finally {
     await new Promise((resolve) => server.close(resolve));
+    await closeDatabase();
   }
 }
 
@@ -64,7 +73,7 @@ test("session endpoint rejects text and stores features only", async () => {
     const session = await accepted.json();
     assert.equal(accepted.status, 200);
     assert.ok(session.deviation >= 0);
-    const dump = JSON.stringify(database.all("SELECT * FROM sessions"));
+    const dump = JSON.stringify(await database.all("SELECT * FROM sessions"));
     assert.doesNotMatch(dump, /awful/);
   });
 });
@@ -81,8 +90,8 @@ test("export has no journal text and delete removes records", async () => {
       headers: { "x-bhaav-user": "demo" },
     });
     assert.equal((await deleted.json()).deleted, true);
-    assert.equal(database.all("SELECT * FROM sessions WHERE user_id = ?", ["demo"]).length, 0);
-    assert.equal(database.all("SELECT * FROM insights WHERE user_id = ?", ["demo"]).length, 0);
+    assert.equal((await database.all("SELECT * FROM sessions WHERE user_id = $1", ["demo"])).length, 0);
+    assert.equal((await database.all("SELECT * FROM insights WHERE user_id = $1", ["demo"])).length, 0);
   });
 });
 
@@ -94,7 +103,7 @@ test("campus pulse is enforced server-side", async () => {
     assert.equal(pulse.withheld, false);
     assert.ok(pulse.participantCount >= 10);
 
-    database.run("DELETE FROM sessions WHERE user_id LIKE 'campus-%'");
+    await database.run("DELETE FROM sessions WHERE user_id LIKE 'campus-%'");
     const blocked = await fetch(`${url}/api/campus`, { headers: { "x-bhaav-user": "demo" } });
     assert.equal(blocked.status, 403);
     const body = await blocked.json();

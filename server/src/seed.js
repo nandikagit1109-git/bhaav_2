@@ -1,7 +1,7 @@
 import crypto from "node:crypto";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { rowToSession } from "./db.js";
+import { rowToSession } from "./pg.js";
 import { buildBaseline, scoreSession, weekStart } from "./stats.js";
 import { fallbackInsight } from "./insights.js";
 
@@ -75,18 +75,18 @@ const DEMO_STORY = [
   ),
 ];
 
-function insertSession(database, userId, data) {
-  const historical = database
-    .all("SELECT * FROM sessions WHERE user_id = ? ORDER BY created_at ASC", [userId])
+async function insertSession(database, userId, data) {
+  const historical = (await database
+    .all("SELECT * FROM sessions WHERE user_id = $1 ORDER BY created_at ASC", [userId]))
     .map(rowToSession);
   const baseline = buildBaseline(historical);
   const score = scoreSession(data, baseline);
   const id = crypto.randomUUID();
-  database.run(
+  await database.run(
     `INSERT INTO sessions (
       id, user_id, created_at, typing_speed, mean_pause_ms, pause_std_dev_ms,
       correction_rate, timing_variance, session_duration, deviation, dominant_feature, high_deviation
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
     [
       id,
       userId,
@@ -105,28 +105,28 @@ function insertSession(database, userId, data) {
   return id;
 }
 
-function ensureUser(database, userId, supportLevel = "suggestions") {
-  const existing = database.get("SELECT id FROM users WHERE id = ?", [userId]);
+async function ensureUser(database, userId, supportLevel = "suggestions") {
+  const existing = await database.get("SELECT id FROM users WHERE id = $1", [userId]);
   if (!existing) {
-    database.run("INSERT INTO users (id, created_at) VALUES (?, ?)", [userId, new Date().toISOString()]);
+    await database.run("INSERT INTO users (id, created_at) VALUES ($1, $2)", [userId, new Date().toISOString()]);
   }
-  database.run(
+  await database.run(
     `INSERT INTO settings (user_id, support_level, trusted_name, trusted_channel, campus_opt_in, updated_at)
-     VALUES (?, ?, ?, ?, 1, ?)
-     ON CONFLICT(user_id) DO UPDATE SET campus_opt_in = 1`,
+     VALUES ($1, $2, $3, $4, 1, $5)
+     ON CONFLICT (user_id) DO UPDATE SET campus_opt_in = 1`,
     [userId, supportLevel, userId === DEMO_USER ? "Riya" : "", "sms", new Date().toISOString()],
   );
 }
 
-export function seedDatabase(database) {
-  database.run("DELETE FROM feedback");
-  database.run("DELETE FROM insights");
-  database.run("DELETE FROM sessions");
-  database.run("DELETE FROM settings");
-  database.run("DELETE FROM users");
+export async function seedDatabase(database) {
+  await database.run("DELETE FROM feedback");
+  await database.run("DELETE FROM insights");
+  await database.run("DELETE FROM sessions");
+  await database.run("DELETE FROM settings");
+  await database.run("DELETE FROM users");
 
-  ensureUser(database, DEMO_USER, "connection");
-  for (const row of DEMO_STORY) insertSession(database, DEMO_USER, row);
+  await ensureUser(database, DEMO_USER, "connection");
+  for (const row of DEMO_STORY) await insertSession(database, DEMO_USER, row);
 
   const insightId = crypto.randomUUID();
   const priorInsightId = crypto.randomUUID();
@@ -140,9 +140,9 @@ export function seedDatabase(database) {
     supportLevel: "connection",
   });
 
-  database.run(
+  await database.run(
     `INSERT INTO insights (id, user_id, week_start, observation, suggestion, source, created_at)
-     VALUES (?, ?, ?, ?, ?, 'fallback', ?)`,
+     VALUES ($1, $2, $3, $4, $5, 'fallback', $6)`,
     [
       priorInsightId,
       DEMO_USER,
@@ -152,24 +152,24 @@ export function seedDatabase(database) {
       daysAgo(7, 9),
     ],
   );
-  database.run(
-    `INSERT INTO feedback (id, insight_id, user_id, response, created_at) VALUES (?, ?, ?, 'a_little', ?)`,
+  await database.run(
+    `INSERT INTO feedback (id, insight_id, user_id, response, created_at) VALUES ($1, $2, $3, 'a_little', $4)`,
     [crypto.randomUUID(), priorInsightId, DEMO_USER, daysAgo(6, 12)],
   );
-  database.run(
+  await database.run(
     `INSERT INTO insights (id, user_id, week_start, observation, suggestion, source, created_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
     [insightId, DEMO_USER, week, copy.observation, copy.suggestion, copy.source, daysAgo(0, 8)],
   );
 
   // Each campus user needs >= MIN_BASELINE_SESSIONS (6) sessions to have non-null deviation
   for (let i = 1; i <= 16; i += 1) {
     const id = `campus-${String(i).padStart(2, "0")}`;
-    ensureUser(database, id, "awareness");
+    await ensureUser(database, id, "awareness");
     const bump = i > 10 ? 0.35 : 0;
     // Insert 7 sessions per campus user spread over time
     for (let j = 0; j < 7; j += 1) {
-      insertSession(database, id, {
+      await insertSession(database, id, {
         typingSpeed: 45 + (i % 5) + (j % 3) * 0.5,
         meanPauseMs: 390 + i * 8 + bump * 200 + (j % 2 === 0 ? 20 : -10),
         pauseStdDevMs: 160 + i * 4 + j * 3,
@@ -181,7 +181,7 @@ export function seedDatabase(database) {
     }
     // One recent session with slight deviation for higher-numbered users
     if (i > 10) {
-      insertSession(database, id, {
+      await insertSession(database, id, {
         typingSpeed: 42,
         meanPauseMs: 560,
         pauseStdDevMs: 250,
@@ -200,9 +200,9 @@ export { DEMO_USER };
 
 const isMain = process.argv[1] && fileURLToPath(import.meta.url) === path.normalize(process.argv[1]);
 if (isMain) {
-  const { createDatabase } = await import("./db.js");
-  const dataFile = path.join(path.dirname(fileURLToPath(import.meta.url)), "../data/bhaav.sqlite");
-  const database = await createDatabase(dataFile);
-  const result = seedDatabase(database);
+  const { createDatabase } = await import("./pg.js");
+  const database = await createDatabase();
+  const result = await seedDatabase(database);
   process.stdout.write(`Seeded ${result.sessions} sessions for ${result.userId}\n`);
+  await database.pool.end();
 }
