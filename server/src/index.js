@@ -94,8 +94,9 @@ export async function createApp(database) {
   app.use(express.json({ limit: "32kb" }));
   app.use(
     cors({
-      origin: CLIENT_ORIGIN,
-      allowedHeaders: ["Content-Type", "x-bhaav-user"],
+      origin: CLIENT_ORIGIN === "*" ? true : CLIENT_ORIGIN,
+      allowedHeaders: ["Content-Type", "Authorization", "x-bhaav-user"],
+      credentials: true,
     }),
   );
 
