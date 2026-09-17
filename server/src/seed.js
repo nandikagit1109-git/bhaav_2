@@ -200,8 +200,14 @@ export { DEMO_USER };
 
 const isMain = process.argv[1] && fileURLToPath(import.meta.url) === path.normalize(process.argv[1]);
 if (isMain) {
-  const { createDatabase } = await import("./pg.js");
-  const database = await createDatabase();
+  let database;
+  if (process.env.DATABASE_URL) {
+    const neonDb = await import("./neon.js");
+    database = await neonDb.createDatabase();
+  } else {
+    const pgDb = await import("./pg.js");
+    database = await pgDb.createDatabase();
+  }
   const result = await seedDatabase(database);
   process.stdout.write(`Seeded ${result.sessions} sessions for ${result.userId}\n`);
   await database.pool.end();

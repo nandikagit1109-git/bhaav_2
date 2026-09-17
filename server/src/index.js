@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import { createDatabase, rowToSession, closeDatabase } from "./pg.js";
+import { rowToSession } from "./pg.js";
 import { createDatabase as createSqliteDatabase } from "./db.js";
 import { buildBaseline, campusAggregate, scoreSession, weekStart, HIGH_DEVIATION } from "./stats.js";
 import { generateInsight } from "./insights.js";
@@ -534,11 +534,16 @@ export async function createApp(database) {
 const isMain = process.argv[1] && path.normalize(process.argv[1]) === fileURLToPath(import.meta.url);
 
 if (isMain) {
-  // Use PostgreSQL if DATABASE_URL is set, otherwise fall back to SQLite
-  const usePg = !!process.env.DATABASE_URL;
-  const database = usePg ? await createDatabase() : await createSqliteDatabase(
-    path.join(path.dirname(fileURLToPath(import.meta.url)), "../data/bhaav.sqlite")
-  );
+  // Use Neon serverless if DATABASE_URL is set, otherwise fall back to SQLite
+  let database;
+  if (process.env.DATABASE_URL) {
+    const neonDb = await import("./neon.js");
+    database = await neonDb.createDatabase();
+  } else {
+    database = await createSqliteDatabase(
+      path.join(path.dirname(fileURLToPath(import.meta.url)), "../data/bhaav.sqlite")
+    );
+  }
   if (usePg) await initCache();
 
   // Seed demo data if database is empty (and DEMO_SEED != "false")
