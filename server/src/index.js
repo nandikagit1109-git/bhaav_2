@@ -544,7 +544,7 @@ if (isMain) {
       path.join(path.dirname(fileURLToPath(import.meta.url)), "../data/bhaav.sqlite")
     );
   }
-  if (usePg) await initCache();
+  if (process.env.DATABASE_URL) await initCache();
 
   // Seed demo data if database is empty (and DEMO_SEED != "false")
   if (process.env.DEMO_SEED !== "false") {
@@ -563,7 +563,6 @@ if (isMain) {
     process.stdout.write(`\n${signal} received — shutting down gracefully…\n`);
     server.close(async () => {
       await closeCache();
-      await closeDatabase();
       process.stdout.write("Goodbye.\n");
       process.exit(0);
     });
