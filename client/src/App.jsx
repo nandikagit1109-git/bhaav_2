@@ -10,6 +10,7 @@ import DashboardPage from './pages/DashboardPage';
 import CampusPulsePage from './pages/CampusPulsePage';
 import PrivacyPage from './pages/PrivacyPage';
 import CrisisPage from './pages/CrisisPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import PrivacyModal from './components/PrivacyModal';
 import SettingsModal from './components/SettingsModal';
 import TechArchitectureModal from './components/TechArchitectureModal';
@@ -86,6 +87,10 @@ function AppContent() {
 
   // Show auth page if not authenticated
   if (!isAuthenticated) {
+    // Forgot password page (accessible without auth)
+    if (window.location.pathname === '/forgot-password') {
+      return <ForgotPasswordPage />;
+    }
     return <AuthPage />;
   }
 

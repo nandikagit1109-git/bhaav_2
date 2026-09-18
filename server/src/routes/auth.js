@@ -169,5 +169,119 @@ export function createAuthRouter(database) {
     res.json({ ok: true, message: "Token cleared client-side" });
   });
 
+  // ── POST /api/auth/forgot-password ─────────────────────────────
+  // Takes an email, generates a reset token, stores it with 1-hour expiry.
+  // For now, logs the reset link to the server console.
+  // Always returns 200 to prevent email enumeration.
+  router.post("/forgot-password", async (req, res) => {
+    try {
+      const { email } = req.body || {};
+      if (!email || typeof email !== "string") {
+        return res.status(400).json({ error: "Email is required" });
+      }
+      const normalizedEmail = email.trim().toLowerCase();
+
+      // Always return success to prevent email enumeration
+      const successResponse = {
+        ok: true,
+        message: "If an account with that email exists, a reset link has been sent.",
+      };
+
+      // Find user
+      const user = await database.get(
+        "SELECT id FROM users WHERE email = $1",
+        [normalizedEmail],
+      );
+      if (!user) {
+        return res.json(successResponse);
+      }
+
+      // Generate a random reset token (URL-safe)
+      const rawToken = crypto.randomBytes(32).toString("hex");
+      const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
+
+      // Store the hashed token with 1-hour expiry
+      const resetId = crypto.randomUUID();
+      const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+      await database.run(
+        `INSERT INTO password_resets (id, user_id, token_hash, expires_at, used, created_at)
+         VALUES ($1, $2, $3, $4, 0, $5)`,
+        [resetId, user.id, tokenHash, expiresAt, new Date().toISOString()],
+      );
+
+      // Log the reset link to the server console
+      // In production, this would send an email instead
+      const resetUrl = `${req.headers.origin || "http://localhost:5173"}/reset-password?token=${rawToken}`;
+      console.log("\n═══════════════════════════════════════════════════════════");
+      console.log("PASSWORD RESET REQUEST");
+      console.log(`Email: ${normalizedEmail}`);
+      console.log(`Reset URL: ${resetUrl}`);
+      console.log(`Expires: ${expiresAt}`);
+      console.log("═══════════════════════════════════════════════════════════\n");
+
+      res.json(successResponse);
+    } catch (error) {
+      console.error("Forgot password error:", error);
+      res.status(500).json({ error: "Unable to process request" });
+    }
+  });
+
+  // ── POST /api/auth/reset-password ──────────────────────────────
+  // Takes the raw token + new password, verifies the hash, updates the password.
+  router.post("/reset-password", async (req, res) => {
+    try {
+      const { token, password } = req.body || {};
+      if (!token || typeof token !== "string") {
+        return res.status(400).json({ error: "Reset token is required" });
+      }
+      if (!password || typeof password !== "string") {
+        return res.status(400).json({ error: "New password is required" });
+      }
+      if (password.length < 8) {
+        return res.status(400).json({ error: "Password must be at least 8 characters" });
+      }
+      if (password.length > 128) {
+        return res.status(400).json({ error: "Password is too long" });
+      }
+
+      // Hash the provided token to compare against stored hash
+      const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+
+      // Find the reset record
+      const reset = await database.get(
+        "SELECT * FROM password_resets WHERE token_hash = $1 AND used = 0",
+        [tokenHash],
+      );
+      if (!reset) {
+        return res.status(400).json({ error: "Invalid or expired reset token" });
+      }
+
+      // Check expiry
+      if (new Date(reset.expires_at) < new Date()) {
+        return res.status(400).json({ error: "Invalid or expired reset token" });
+      }
+
+      // Hash the new password
+      const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
+
+      // Update the user's password
+      await database.run(
+        "UPDATE users SET password_hash = $1 WHERE id = $2",
+        [passwordHash, reset.user_id],
+      );
+
+      // Mark the token as used
+      await database.run(
+        "UPDATE password_resets SET used = 1 WHERE id = $1",
+        [reset.id],
+      );
+
+      res.json({ ok: true, message: "Password updated successfully" });
+    } catch (error) {
+      console.error("Reset password error:", error);
+      res.status(500).json({ error: "Unable to reset password" });
+    }
+  });
+
   return router;
 }

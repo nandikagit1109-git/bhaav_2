@@ -100,7 +100,17 @@ export default function AuthPage() {
             </label>
 
             <label className="block">
-              <span className="eyebrow text-ink-400">Password</span>
+              <div className="flex items-center justify-between">
+                <span className="eyebrow text-ink-400">Password</span>
+                {mode === 'login' && (
+                  <a
+                    href="/forgot-password"
+                    className="text-[11px] font-mono text-ink-400 hover:text-ink-700 transition-colors duration-300"
+                  >
+                    Forgot password?
+                  </a>
+                )}
+              </div>
               <input
                 type="password"
                 value={password}
