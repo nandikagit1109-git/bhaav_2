@@ -68,6 +68,7 @@ export default function Navbar({
             {NAV_LINKS.map((item) => (
               <button
                 key={item.id}
+                data-tour={item.id}
                 onClick={() => go(item.id)}
                 className={`relative font-mono text-[11px] uppercase tracking-[0.16em] transition-colors duration-300 ${
                   currentView === item.id ? 'text-ink-950' : 'text-ink-500 hover:text-ink-950'

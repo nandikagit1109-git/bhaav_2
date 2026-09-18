@@ -13,6 +13,7 @@ import CrisisPage from './pages/CrisisPage';
 import PrivacyModal from './components/PrivacyModal';
 import SettingsModal from './components/SettingsModal';
 import TechArchitectureModal from './components/TechArchitectureModal';
+import TourOverlay from './components/TourOverlay';
 import { EASE } from './motion/primitives';
 
 export default function App() {
@@ -30,6 +31,7 @@ function AppContent() {
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isTechModalOpen, setIsTechModalOpen] = useState(false);
   const [sessionRefreshKey, setSessionRefreshKey] = useState(0);
+  const [tourActive, setTourActive] = useState(false);
   const reduced = useReducedMotion();
 
   const handleNavigate = (viewId, sectionId) => {
@@ -161,6 +163,7 @@ function AppContent() {
             <button onClick={() => handleNavigate('campus')} className="ink-link">Campus pulse</button>
             <button onClick={() => handleNavigate('privacy')} className="ink-link">Privacy</button>
             <button onClick={() => setIsTechModalOpen(true)} className="ink-link">How it works</button>
+            <button onClick={() => setTourActive(true)} className="ink-link">Take the tour</button>
             <button onClick={() => setIsSettingsModalOpen(true)} className="ink-link">Settings</button>
             <button onClick={() => handleNavigate('crisis')} className="ink-link text-accent-terracotta">Crisis support</button>
           </nav>
@@ -189,6 +192,8 @@ function AppContent() {
         isOpen={isTechModalOpen}
         onClose={() => setIsTechModalOpen(false)}
       />
+
+      <TourOverlay active={tourActive} onFinish={() => setTourActive(false)} />
     </div>
   );
 }
