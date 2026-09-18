@@ -14,6 +14,7 @@ import PrivacyModal from './components/PrivacyModal';
 import SettingsModal from './components/SettingsModal';
 import TechArchitectureModal from './components/TechArchitectureModal';
 import TourOverlay from './components/TourOverlay';
+import IntroSequence, { hasSeenIntro, markIntroSeen } from './components/IntroSequence';
 import { EASE } from './motion/primitives';
 
 export default function App() {
@@ -32,6 +33,7 @@ function AppContent() {
   const [isTechModalOpen, setIsTechModalOpen] = useState(false);
   const [sessionRefreshKey, setSessionRefreshKey] = useState(0);
   const [tourActive, setTourActive] = useState(false);
+  const [showIntro, setShowIntro] = useState(() => !hasSeenIntro());
   const reduced = useReducedMotion();
 
   const handleNavigate = (viewId, sectionId) => {
@@ -194,6 +196,16 @@ function AppContent() {
       />
 
       <TourOverlay active={tourActive} onFinish={() => setTourActive(false)} />
+
+      {/* Intro sequence — shown on first visit, skippable */}
+      {showIntro && (
+        <IntroSequence
+          onComplete={() => {
+            markIntroSeen();
+            setShowIntro(false);
+          }}
+        />
+      )}
     </div>
   );
 }

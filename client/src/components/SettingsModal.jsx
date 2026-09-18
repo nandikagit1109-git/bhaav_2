@@ -16,6 +16,7 @@ import {
   reseedDemoData,
   setCampusPulseOptIn,
 } from '../api/client';
+import { resetIntro } from './IntroSequence';
 
 const LEVELS = [
   {
@@ -260,6 +261,20 @@ export default function SettingsModal({ isOpen, onClose, onDataReset, onNavigate
             </div>
           </div>
         )}
+
+        {/* Watch intro again */}
+        <div className="pt-2 border-t border-stone-border/60">
+          <button
+            onClick={() => {
+              resetIntro();
+              onClose();
+              window.location.reload();
+            }}
+            className="text-[11px] font-mono uppercase tracking-[0.12em] text-ink-400 hover:text-ink-700 transition-colors"
+          >
+            Watch intro again
+          </button>
+        </div>
 
         {/* Crisis support link */}
         <div className="pt-2 border-t border-stone-border/60">
