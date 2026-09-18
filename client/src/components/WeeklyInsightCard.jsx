@@ -3,6 +3,8 @@ import { motion, useMotionValue, useTransform, animate, useReducedMotion } from 
 import { submitInsightFeedback } from '../api/client';
 import { FadeUp } from '../motion/primitives';
 import InsightActivity from './InsightActivity';
+import WeatherFeedback from './WeatherFeedback';
+import RollKindness from './RollKindness';
 
 /**
  * WalkTheDot — interactive drag feedback replacing three buttons.
@@ -301,10 +303,40 @@ function WalkTheDot({ feedbackId, existingFeedback, onSubmit }) {
   );
 }
 
+/* ————————————————— TAB SELECTOR ————————————————— */
+
+const FEEDBACK_TABS = [
+  { id: 'dot', label: 'Walk the dot' },
+  { id: 'weather', label: 'Weather' },
+  { id: 'roll', label: 'Roll a kindness' },
+];
+
+function FeedbackTabBar({ active, onChange }) {
+  return (
+    <div className="flex items-center gap-1 mt-6">
+      {FEEDBACK_TABS.map((tab) => (
+        <button
+          key={tab.id}
+          onClick={() => onChange(tab.id)}
+          className={`relative font-mono text-[10px] uppercase tracking-[0.14em] px-3 py-1.5 rounded-md transition-colors duration-300 ${
+            active === tab.id
+              ? 'text-ink-950 bg-ink-100/60'
+              : 'text-ink-400 hover:text-ink-600'
+          }`}
+          aria-pressed={active === tab.id}
+        >
+          {tab.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 /* ————————————————— PARENT CARD ————————————————— */
 
 export default function WeeklyInsightCard({ insight, onFeedbackUpdated }) {
   const [feedbackStatus, setFeedbackStatus] = useState(insight?.feedback_status || null);
+  const [activeTab, setActiveTab] = useState('dot');
 
   const handleSubmit = (status) => {
     setFeedbackStatus(status);
@@ -333,17 +365,37 @@ export default function WeeklyInsightCard({ insight, onFeedbackUpdated }) {
           onActivityComplete={() => {/* activity done, feedback still available below */}}
         />
 
-        {/* The feedback moment — Walk the dot */}
+        {/* The feedback moment — with tab toggle */}
         <div className="mt-12 pt-8 border-t border-stone-border">
           <h4 className="text-display-sub font-serif text-ink-950">
             Did that make<br />a difference?
           </h4>
 
-          <WalkTheDot
-            feedbackId={insight.id}
-            existingFeedback={feedbackStatus}
-            onSubmit={handleSubmit}
-          />
+          {/* Tab selector to switch between feedback modes */}
+          <FeedbackTabBar active={activeTab} onChange={setActiveTab} />
+
+          {/* Walk the dot (original) */}
+          {activeTab === 'dot' && (
+            <WalkTheDot
+              feedbackId={insight.id}
+              existingFeedback={feedbackStatus}
+              onSubmit={handleSubmit}
+            />
+          )}
+
+          {/* Weather feedback (new) */}
+          {activeTab === 'weather' && (
+            <WeatherFeedback
+              feedbackId={insight.id}
+              existingFeedback={feedbackStatus}
+              onSubmit={handleSubmit}
+            />
+          )}
+
+          {/* Roll a kindness (new) — no backend feedback, just a playful moment */}
+          {activeTab === 'roll' && (
+            <RollKindness />
+          )}
         </div>
       </div>
     </FadeUp>
