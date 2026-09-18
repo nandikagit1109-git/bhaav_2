@@ -1,19 +1,30 @@
 FROM node:20-alpine
 
-# Create app dir and data dir with proper permissions
-RUN mkdir -p /app/server/data
+# System deps for building the client
+RUN apk add --no-cache python3 make g++
 
-WORKDIR /app/server
+# Create app directories
+RUN mkdir -p /app/server/data /app/client
 
-# Install dependencies first (Docker layer caching)
-COPY server/package.json server/package-lock.json ./
-RUN npm ci --production
+WORKDIR /app
 
-# Copy server source
-COPY server/ ./
+# ── Install server dependencies (cached) ────────────────────────
+COPY server/package.json server/package-lock.json ./server/
+RUN cd server && npm ci --production
 
-# Ensure data dir is writable
-RUN chmod 777 /app/server/data
+# ── Install client dependencies (cached) ────────────────────────
+COPY client/package.json client/package-lock.json ./client/
+RUN cd client && npm ci
+
+# ── Copy source ─────────────────────────────────────────────────
+COPY server/ ./server/
+COPY client/ ./client/
+
+# ── Build client ────────────────────────────────────────────────
+RUN cd client && npm run build
+
+# ── Serve built client from the server ──────────────────────────
+# (Express static middleware will serve client/dist)
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
@@ -21,4 +32,5 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
 
 EXPOSE 8787
 
+WORKDIR /app/server
 CMD ["node", "src/index.js"]

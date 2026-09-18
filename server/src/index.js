@@ -92,6 +92,15 @@ export async function createApp(database) {
   const app = express();
   app.disable("x-powered-by");
   app.use(express.json({ limit: "32kb" }));
+
+  // ── Serve built React frontend (production) ─────────────────
+  const clientDist = path.join(path.dirname(fileURLToPath(import.meta.url)), "../../client/dist");
+  try {
+    const { default: fs } = await import("node:fs");
+    if (fs.existsSync(clientDist)) {
+      app.use(express.static(clientDist));
+    }
+  } catch { /* no static serving in tests */ }
   app.use(
     cors({
       origin: CLIENT_ORIGIN === "*" ? true : CLIENT_ORIGIN,
@@ -448,6 +457,20 @@ export async function createApp(database) {
       res.status(500).json({ error: "Seed failed" });
     }
   });
+
+  // ── SPA fallback — serve index.html for any non-API route ──────
+  const indexPath = path.join(clientDist, "index.html");
+  try {
+    const { default: fs } = await import("node:fs");
+    if (fs.existsSync(indexPath)) {
+      app.get("*", (req, res) => {
+        if (req.path.startsWith("/api")) {
+          return res.status(404).json({ error: "Not found" });
+        }
+        res.sendFile(indexPath);
+      });
+    }
+  } catch { /* no-op */ }
 
   app.use((err, _req, res, _next) => {
     res.status(500).json({ error: "Unexpected error" });
