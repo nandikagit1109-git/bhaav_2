@@ -261,7 +261,9 @@ export async function reseedDemoData() {
 
 // ── Campus Pulse Peer Count ────────────────────────
 export async function fetchPeerCount(userId) {
-  const res = await fetch(`${API_BASE}/campus-pulse/peer-count/${encodeURIComponent(userId)}`);
+  const res = await fetch(`${API_BASE}/campus-pulse/peer-count/${encodeURIComponent(userId)}`, {
+    headers: userHeaders(),
+  });
   if (!res.ok) throw new Error('Failed to fetch peer count');
   return res.json();
 }

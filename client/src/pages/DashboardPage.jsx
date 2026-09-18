@@ -3,6 +3,7 @@ import TrendChart from '../components/TrendChart';
 import WeeklyInsightCard from '../components/WeeklyInsightCard';
 import PeerCountCard from '../components/PeerCountCard';
 import { InkPath } from '../motion/primitives';
+import { useAuth } from '../contexts/AuthContext';
 import {
   fetchSessions,
   fetchBaseline,
@@ -57,6 +58,7 @@ const devBadge = (score) => {
 };
 
 export default function DashboardPage({ onNavigateToJournal, onOpenPrivacyModal }) {
+  const { user } = useAuth();
   const [sessions, setSessions] = useState([]);
   const [baseline, setBaseline] = useState(null);
   const [insight, setInsight] = useState(null);
@@ -64,27 +66,47 @@ export default function DashboardPage({ onNavigateToJournal, onOpenPrivacyModal 
   const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
+    if (!user?.id) return;
+    let cancelled = false;
     async function loadDashboardData() {
       setIsLoading(true);
       setLoadError(false);
       try {
-        const [sessionsRes, baselineRes, insightRes] = await Promise.all([
+        const results = await Promise.allSettled([
           fetchSessions(),
           fetchBaseline(),
-          fetchWeeklyInsight()
+          fetchWeeklyInsight(),
         ]);
-        setSessions(sessionsRes.sessions || []);
-        setBaseline(baselineRes.baseline || null);
-        setInsight(insightRes.insight || null);
+        if (cancelled) return;
+        // Sessions — if this fails, we show an error
+        if (results[0].status === 'fulfilled') {
+          setSessions(results[0].value.sessions || []);
+        } else {
+          console.error('Failed to load sessions:', results[0].reason);
+          setLoadError(true);
+        }
+        // Baseline — optional, render as null if missing
+        if (results[1].status === 'fulfilled') {
+          setBaseline(results[1].value.baseline || null);
+        } else {
+          console.warn('Baseline unavailable:', results[1].reason);
+        }
+        // Insight — optional, render as null if missing
+        if (results[2].status === 'fulfilled') {
+          setInsight(results[2].value.insight || null);
+        } else {
+          console.warn('Insight unavailable:', results[2].reason);
+        }
       } catch (err) {
         console.error('Failed to load dashboard:', err);
-        setLoadError(true);
+        if (!cancelled) setLoadError(true);
       } finally {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
     }
     loadDashboardData();
-  }, []);
+    return () => { cancelled = true; };
+  }, [user?.id]);
 
   const latestSession = sessions.length > 0 ? sessions[sessions.length - 1] : null;
   const headline = headlineFor(latestSession, sessions.length);

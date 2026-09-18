@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { fetchPeerCount, setCampusPulseOptIn } from '../api/client';
+import { useAuth } from '../contexts/AuthContext';
 
 /**
  * PeerCountCard — a small, privacy-first card on the Dashboard.
@@ -8,17 +9,19 @@ import { fetchPeerCount, setCampusPulseOptIn } from '../api/client';
  * K-anonymity floor enforced server-side.
  */
 export default function PeerCountCard({ onOpenSettings: _onOpenSettings }) {
+  const { user } = useAuth();
   const [data, setData] = useState(null);
   const [dismissed, setDismissed] = useState(false);
   const [toggling, setToggling] = useState(false);
 
   useEffect(() => {
+    if (!user?.id) return;
     let cancelled = false;
-    fetchPeerCount('demo')
+    fetchPeerCount(user.id)
       .then((res) => { if (!cancelled) setData(res); })
       .catch(() => { /* silent */ });
     return () => { cancelled = true; };
-  }, []);
+  }, [user?.id]);
 
   // Don't show anything if dismissed this session
   if (dismissed) return null;
@@ -49,7 +52,7 @@ export default function PeerCountCard({ onOpenSettings: _onOpenSettings }) {
               setToggling(true);
               try {
                 await setCampusPulseOptIn(true);
-                const res = await fetchPeerCount('demo');
+                const res = await fetchPeerCount(user.id);
                 setData(res);
               } catch (_) { /* silent */ }
               setToggling(false);
