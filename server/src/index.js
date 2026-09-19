@@ -262,6 +262,38 @@ export async function createApp(database) {
         [userId, week],
       );
       if (existing) {
+        // BUG FIX: If baseline is now ready but the stored insight was generated
+        // when it wasn't ("still learning" fallback), regenerate the insight.
+        if (score.ready && existing.source === "fallback") {
+          const refreshed = await generateInsight({
+            score,
+            baseline: baseline.ready ? baseline.features : null,
+            latest: latest
+              ? {
+                  typingSpeed: latest.typingSpeed,
+                  meanPauseMs: latest.meanPauseMs,
+                  pauseStdDevMs: latest.pauseStdDevMs,
+                  correctionRate: latest.correctionRate,
+                  timingVariance: latest.timingVariance,
+                }
+              : null,
+            previousFeedback: null,
+            supportLevel: userSettings.supportLevel,
+          });
+          // Update the stored insight with the refreshed version
+          await database.run(
+            "UPDATE insights SET observation = $1, suggestion = $2, source = $3 WHERE id = $4",
+            [refreshed.observation, refreshed.suggestion, refreshed.source, existing.id],
+          );
+          return res.json({
+            id: existing.id,
+            observation: refreshed.observation,
+            suggestion: refreshed.suggestion,
+            source: refreshed.source,
+            weekStart: existing.week_start,
+            feedback: null,
+          });
+        }
         const fb = await database.get("SELECT * FROM feedback WHERE insight_id = $1", [existing.id]);
         return res.json({
           id: existing.id,

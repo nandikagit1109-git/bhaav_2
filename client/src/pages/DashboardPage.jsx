@@ -64,6 +64,7 @@ export default function DashboardPage({ onNavigateToJournal, onOpenPrivacyModal 
   const [insight, setInsight] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
+  const [insightLoading, setInsightLoading] = useState(true);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -71,6 +72,7 @@ export default function DashboardPage({ onNavigateToJournal, onOpenPrivacyModal 
     async function loadDashboardData() {
       setIsLoading(true);
       setLoadError(false);
+      setInsightLoading(true);
       try {
         const results = await Promise.allSettled([
           fetchSessions(),
@@ -97,6 +99,7 @@ export default function DashboardPage({ onNavigateToJournal, onOpenPrivacyModal 
         } else {
           console.warn('Insight unavailable:', results[2].reason);
         }
+        setInsightLoading(false);
       } catch (err) {
         console.error('Failed to load dashboard:', err);
         if (!cancelled) setLoadError(true);
@@ -126,7 +129,7 @@ export default function DashboardPage({ onNavigateToJournal, onOpenPrivacyModal 
       </div>
 
       {/* ——— The thin data layer ——— */}
-      {isLoading ? (
+      {isLoading && sessions.length === 0 ? (
         <div className="mt-16 space-y-8 animate-pulse">
           {/* Skeleton: stat row */}
           <div className="pt-6 border-t border-stone-border flex flex-wrap gap-x-12 gap-y-3">
@@ -204,7 +207,7 @@ export default function DashboardPage({ onNavigateToJournal, onOpenPrivacyModal 
           </section>
 
           {/* ——— Weekly insight ——— */}
-          {insight && (
+          {insight ? (
             <section className="mt-20">
               <WeeklyInsightCard
                 insight={insight}
@@ -213,7 +216,15 @@ export default function DashboardPage({ onNavigateToJournal, onOpenPrivacyModal 
                 }}
               />
             </section>
-          )}
+          ) : insightLoading ? (
+            <section className="mt-20">
+              <div className="gradient-card-coral glow-coral rounded-xl p-6 animate-pulse">
+                <div className="h-3 w-24 bg-ink-200/60 rounded mb-4" />
+                <div className="h-5 w-3/4 bg-ink-200/40 rounded mb-2" />
+                <div className="h-5 w-1/2 bg-ink-200/30 rounded" />
+              </div>
+            </section>
+          ) : null}
 
           {/* ——— Session ledger ——— */}
           <section className="mt-20">
