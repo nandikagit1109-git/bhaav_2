@@ -2,6 +2,7 @@ import React, { useRef, useState, useEffect } from 'react';
 import { motion, useScroll, useMotionValueEvent, useReducedMotion, AnimatePresence } from 'framer-motion';
 import { ArrowUpRight, ArrowDown, ChevronDown } from 'lucide-react';
 import TheLineYouWalkHero from '../components/TheLineYouWalkHero';
+import ScrollScrubVideo from '../components/ScrollScrubVideo';
 import {
   FadeUp,
   RevealWords,
@@ -766,6 +767,15 @@ export default function HomePage({ onNavigate, onOpenSettings, onOpenHowItWorks 
         <ChapterQuestion />
         <InkRule />
         <ChapterSignals />
+        <InkRule />
+        <ScrollScrubVideo
+          src="/demo/bhaav-demo.mp4"
+          poster="/demo/bhaav-poster.jpg"
+          sectionH={250}
+          mark="03"
+          label="See it in action"
+          caption="Scroll to scrub through a Bhaav writing session"
+        />
         <InkRule />
         <ChapterBaseline />
         <ChapterDeviation />
