@@ -5,6 +5,8 @@ import { FadeUp } from '../motion/primitives';
 import InsightActivity from './InsightActivity';
 import WeatherFeedback from './WeatherFeedback';
 import RollKindness from './RollKindness';
+import SmallSlidePuzzle from './SmallSlidePuzzle';
+import OneSmallRiddle from './OneSmallRiddle';
 
 /**
  * WalkTheDot — interactive drag feedback replacing three buttons.
@@ -309,11 +311,13 @@ const FEEDBACK_TABS = [
   { id: 'dot', label: 'Walk the dot' },
   { id: 'weather', label: 'Weather' },
   { id: 'roll', label: 'Roll a kindness' },
+  { id: 'slide', label: 'Small slide' },
+  { id: 'riddle', label: 'A riddle' },
 ];
 
 function FeedbackTabBar({ active, onChange }) {
   return (
-    <div className="flex items-center gap-1 mt-6">
+    <div className="flex items-center gap-1 mt-6 overflow-x-auto pb-1 scrollbar-hide">
       {FEEDBACK_TABS.map((tab) => (
         <button
           key={tab.id}
@@ -395,6 +399,16 @@ export default function WeeklyInsightCard({ insight, onFeedbackUpdated }) {
           {/* Roll a kindness (new) — no backend feedback, just a playful moment */}
           {activeTab === 'roll' && (
             <RollKindness />
+          )}
+
+          {/* Small slide puzzle — no backend feedback, just a playful moment */}
+          {activeTab === 'slide' && (
+            <SmallSlidePuzzle />
+          )}
+
+          {/* One small riddle — no backend feedback, just a reflective moment */}
+          {activeTab === 'riddle' && (
+            <OneSmallRiddle />
           )}
         </div>
       </div>

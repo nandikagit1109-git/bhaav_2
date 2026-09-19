@@ -392,6 +392,70 @@
 .accent-bar-rose { border-left: 3px solid #F43F5E; padding-left: 1rem; }
 .accent-bar-sky { border-left: 3px solid #0EA5E9; padding-left: 1rem; }
 
+/* ——— Feedback/play area accent palette ——— */
+:root {
+  --play-sage: #7A8B69;
+  --play-slate: #6B84A3;
+  --play-ochre: #C9A227;
+}
+
+/* ——— Small Slide Puzzle ——— */
+.slide-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  width: 228px;
+  height: 228px;
+}
+.slide-tile {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #E2DBCB;
+  border-radius: 6px;
+  background: #FBF9F4;
+  font-family: 'Newsreader', Georgia, serif;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #1E1B16;
+  user-select: none;
+  transition: background 0.3s, box-shadow 0.3s;
+}
+.slide-tile.movable {
+  cursor: pointer;
+}
+.slide-tile.movable:hover {
+  background: #E9E4D8;
+  box-shadow: 0 2px 8px rgba(30, 27, 22, 0.08);
+}
+.slide-tile.blank {
+  background: transparent;
+  border: 1px dashed #D6CFC0;
+}
+.slide-tile.solved-glow {
+  background: var(--play-ochre);
+  color: #FBF9F4;
+  box-shadow: 0 0 20px rgba(201, 162, 39, 0.4);
+  border-color: var(--play-ochre);
+}
+
+/* ——— Riddle card ——— */
+.riddle-card {
+  background: linear-gradient(135deg, #EAF0EA 0%, #E9E4D8 100%);
+  border: 1px solid #E2DBCB;
+  border-radius: 12px;
+  padding: 1.5rem;
+}
+
+/* ——— Hide scrollbar utility ——— */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
 /* ——— Respect prefers-reduced-motion ——— */
 @media (prefers-reduced-motion: reduce) {
   *, ::before, ::after {
