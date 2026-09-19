@@ -10,7 +10,17 @@
 import bcrypt from "bcrypt";
 import crypto from "node:crypto";
 import express from "express";
+import { Resend } from "resend";
 import { signToken, requireAuth } from "../middleware/auth.js";
+
+// Resend email client — initialized lazily so missing key doesn't crash local dev
+let resend = null;
+function getResend() {
+  if (process.env.RESEND_API_KEY && !resend) {
+    resend = new Resend(process.env.RESEND_API_KEY);
+  }
+  return resend;
+}
 
 const SALT_ROUNDS = 10;
 
@@ -209,16 +219,37 @@ export function createAuthRouter(database) {
         [resetId, user.id, tokenHash, expiresAt, new Date().toISOString()],
       );
 
-      // Log the reset link to the server console
-      // In production, this would send an email instead
       const resetUrl = `${req.headers.origin || "http://localhost:5173"}/reset-password?token=${rawToken}`;
-      console.log("\n═══════════════════════════════════════════════════════════");
-      console.log("PASSWORD RESET REQUEST");
-      console.log(`Email: ${normalizedEmail}`);
-      console.log(`Reset URL: ${resetUrl}`);
-      console.log(`Expires: ${expiresAt}`);
-      console.log("═══════════════════════════════════════════════════════════\n");
 
+      // Send password-reset email via Resend (fall back to console.log in dev)
+      const resendClient = getResend();
+      if (resendClient) {
+        try {
+          await resendClient.emails.send({
+            from: "Bhaav <onboarding@resend.dev>",
+            to: normalizedEmail,
+            subject: "Reset your Bhaav access",
+            text: `Someone requested a password reset for your Bhaav account.\n\nOpen this link to set a new password:\n\n${resetUrl}\n\nThis link expires in 1 hour.\n\nIf you didn't request this, just ignore this email — your account is safe.`,
+          });
+          console.log(`[Resend] Password-reset email sent to ${normalizedEmail}`);
+        } catch (emailErr) {
+          console.error("[Resend] Failed to send reset email:", emailErr.message || emailErr);
+          // Return a clear error instead of pretending it worked
+          return res.status(502).json({
+            error: "Email delivery failed. Please try again in a moment.",
+          });
+        }
+      } else {
+        // No RESEND_API_KEY — local dev fallback (remove before real launch)
+        console.log("\n═══════════════════════════════════════════════════════════");
+        console.log("PASSWORD RESET REQUEST (dev — no email sent)");
+        console.log(`Email: ${normalizedEmail}`);
+        console.log(`Reset URL: ${resetUrl}`);
+        console.log(`Expires: ${expiresAt}`);
+        console.log("═══════════════════════════════════════════════════════════\n");
+      }
+
+      // Always return the same response regardless of email status (prevent email enumeration)
       res.json(successResponse);
     } catch (error) {
       console.error("Forgot password error:", error);
