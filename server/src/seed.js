@@ -2,7 +2,8 @@ import crypto from "node:crypto";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { rowToSession } from "./pg.js";
-import { buildBaseline, scoreSession, scoreSmoothed, weekStart } from "../lib/baseline.js";
+import { buildBaseline, scoreSession, scoreSmoothed } from "../lib/baseline.js";
+import { weekStart } from "./stats.js";
 import { fallbackInsight } from "./insights.js";
 
 const DEMO_USER = "demo";

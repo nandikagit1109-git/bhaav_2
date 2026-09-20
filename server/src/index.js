@@ -6,11 +6,11 @@ import cors from "cors";
 import dotenv from "dotenv";
 import { rowToSession } from "./pg.js";
 import { createDatabase as createSqliteDatabase } from "./db.js";
-import { campusAggregate, weekStart as weekStartLegacy, HIGH_DEVIATION } from "./stats.js";
+import { campusAggregate, weekStart, HIGH_DEVIATION } from "./stats.js";
 import { generateInsight } from "../lib/insights.js";
 import { assertUserId } from "./validate.js";
 import { sanitizeSession } from "../lib/validate.js";
-import { buildBaseline, scoreSession, scoreSmoothed, summarizeDirection, weekStart } from "../lib/baseline.js";
+import { buildBaseline, scoreSession, scoreSmoothed, summarizeDirection } from "../lib/baseline.js";
 import { seedDatabase } from "./seed.js";
 import { initCache, getCachedBaseline, setCachedBaseline, invalidateBaseline, invalidateAllBaselines, closeCache } from "./cache.js";
 import {
