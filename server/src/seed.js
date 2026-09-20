@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { rowToSession } from "./pg.js";
-import { buildBaseline, scoreSession, weekStart } from "./stats.js";
+import { buildBaseline, scoreSession, scoreSmoothed, weekStart } from "../lib/baseline.js";
 import { fallbackInsight } from "./insights.js";
 
 const DEMO_USER = "demo";
@@ -21,6 +21,9 @@ function session(partial, days, hour) {
     pauseStdDevMs: 175,
     correctionRate: 0.055,
     timingVariance: 0.11,
+    longPauseRate: 0.15,
+    correctionBurstRate: 0.03,
+    speedDecay: 0.04,
     sessionDuration: 540,
     ...partial,
     createdAt: daysAgo(days, hour),
@@ -41,6 +44,9 @@ const DEMO_STORY = [
       pauseStdDevMs: 390,
       correctionRate: 0.12,
       timingVariance: 0.29,
+      longPauseRate: 0.35,
+      correctionBurstRate: 0.12,
+      speedDecay: 0.28,
       sessionDuration: 720,
     },
     8,
@@ -53,6 +59,9 @@ const DEMO_STORY = [
       pauseStdDevMs: 280,
       correctionRate: 0.09,
       timingVariance: 0.2,
+      longPauseRate: 0.25,
+      correctionBurstRate: 0.08,
+      speedDecay: 0.18,
       sessionDuration: 580,
     },
     5,
@@ -68,6 +77,9 @@ const DEMO_STORY = [
       pauseStdDevMs: 310,
       correctionRate: 0.1,
       timingVariance: 0.22,
+      longPauseRate: 0.3,
+      correctionBurstRate: 0.1,
+      speedDecay: 0.22,
       sessionDuration: 640,
     },
     1,
@@ -81,12 +93,19 @@ async function insertSession(database, userId, data) {
     .map(rowToSession);
   const baseline = buildBaseline(historical);
   const score = scoreSession(data, baseline);
+
+  // Multi-session smoothing for this insert
+  const allSessions = [...historical, data];
+  const smoothedScore = scoreSmoothed(allSessions, baseline);
+  const smoothedCombinedZ = smoothedScore._rawCombinedZ ?? null;
+
   const id = crypto.randomUUID();
   await database.run(
     `INSERT INTO sessions (
       id, user_id, created_at, typing_speed, mean_pause_ms, pause_std_dev_ms,
-      correction_rate, timing_variance, session_duration, deviation, dominant_feature, high_deviation
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+      correction_rate, timing_variance, session_duration, deviation, dominant_feature, high_deviation,
+      long_pause_rate, correction_burst_rate, speed_decay, smoothed_combined_z
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
     [
       id,
       userId,
@@ -100,6 +119,10 @@ async function insertSession(database, userId, data) {
       score.deviation,
       score.dominantFeature,
       score.highDeviation ? 1 : 0,
+      data.longPauseRate ?? 0,
+      data.correctionBurstRate ?? 0,
+      data.speedDecay ?? 0,
+      smoothedCombinedZ,
     ],
   );
   return id;
@@ -175,6 +198,9 @@ export async function seedDatabase(database) {
         pauseStdDevMs: 160 + i * 4 + j * 3,
         correctionRate: 0.05 + (i % 4) * 0.004,
         timingVariance: 0.1 + bump + j * 0.005,
+        longPauseRate: 0.12 + (i % 3) * 0.03,
+        correctionBurstRate: 0.02 + (i % 4) * 0.005,
+        speedDecay: 0.03 + (j % 3) * 0.02,
         sessionDuration: 400 + i * 10 + j * 20,
         createdAt: daysAgo(14 - j, 16 + (i % 4)),
       });
@@ -187,6 +213,9 @@ export async function seedDatabase(database) {
         pauseStdDevMs: 250,
         correctionRate: 0.08,
         timingVariance: 0.18,
+        longPauseRate: 0.22,
+        correctionBurstRate: 0.07,
+        speedDecay: 0.15,
         sessionDuration: 520,
         createdAt: daysAgo(1, 20),
       });

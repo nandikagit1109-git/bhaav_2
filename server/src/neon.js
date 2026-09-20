@@ -125,7 +125,11 @@ async function runMigrations(sql) {
       session_duration      DOUBLE PRECISION NOT NULL,
       deviation             DOUBLE PRECISION,
       dominant_feature      TEXT,
-      high_deviation        INTEGER NOT NULL DEFAULT 0
+      high_deviation        INTEGER NOT NULL DEFAULT 0,
+      long_pause_rate       DOUBLE PRECISION NOT NULL DEFAULT 0,
+      correction_burst_rate DOUBLE PRECISION NOT NULL DEFAULT 0,
+      speed_decay           DOUBLE PRECISION NOT NULL DEFAULT 0,
+      smoothed_combined_z   DOUBLE PRECISION
     );
 
     CREATE TABLE IF NOT EXISTS insights (
@@ -174,6 +178,20 @@ async function runMigrations(sql) {
     ALTER TABLE users ADD COLUMN IF NOT EXISTS recovery_code TEXT UNIQUE
   `;
 
+  // Migration: add analysis upgrade columns
+  await sql`
+    ALTER TABLE sessions ADD COLUMN IF NOT EXISTS long_pause_rate DOUBLE PRECISION NOT NULL DEFAULT 0
+  `;
+  await sql`
+    ALTER TABLE sessions ADD COLUMN IF NOT EXISTS correction_burst_rate DOUBLE PRECISION NOT NULL DEFAULT 0
+  `;
+  await sql`
+    ALTER TABLE sessions ADD COLUMN IF NOT EXISTS speed_decay DOUBLE PRECISION NOT NULL DEFAULT 0
+  `;
+  await sql`
+    ALTER TABLE sessions ADD COLUMN IF NOT EXISTS smoothed_combined_z DOUBLE PRECISION
+  `;
+
   // Backfill: existing users without recovery codes get one on their next request.
   // The ensureUser function in index.js handles this automatically.
 }
@@ -196,6 +214,10 @@ export function rowToSession(row) {
     deviation: row.deviation,
     dominantFeature: row.dominant_feature,
     highDeviation: Boolean(row.high_deviation),
+    longPauseRate: row.long_pause_rate ?? 0,
+    correctionBurstRate: row.correction_burst_rate ?? 0,
+    speedDecay: row.speed_decay ?? 0,
+    smoothedCombinedZ: row.smoothed_combined_z ?? null,
   };
 }
 

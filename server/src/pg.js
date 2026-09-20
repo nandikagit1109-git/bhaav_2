@@ -136,7 +136,11 @@ async function runMigrations(pool) {
       session_duration      DOUBLE PRECISION NOT NULL,
       deviation             DOUBLE PRECISION,
       dominant_feature      TEXT,
-      high_deviation        INTEGER NOT NULL DEFAULT 0
+      high_deviation        INTEGER NOT NULL DEFAULT 0,
+      long_pause_rate       DOUBLE PRECISION NOT NULL DEFAULT 0,
+      correction_burst_rate DOUBLE PRECISION NOT NULL DEFAULT 0,
+      speed_decay           DOUBLE PRECISION NOT NULL DEFAULT 0,
+      smoothed_combined_z   DOUBLE PRECISION
     );
 
     CREATE TABLE IF NOT EXISTS insights (
@@ -200,6 +204,10 @@ export function rowToSession(row) {
     deviation: row.deviation,
     dominantFeature: row.dominant_feature,
     highDeviation: Boolean(row.high_deviation),
+    longPauseRate: row.long_pause_rate ?? 0,
+    correctionBurstRate: row.correction_burst_rate ?? 0,
+    speedDecay: row.speed_decay ?? 0,
+    smoothedCombinedZ: row.smoothed_combined_z ?? null,
   };
 }
 

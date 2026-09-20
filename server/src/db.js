@@ -45,7 +45,11 @@ CREATE TABLE IF NOT EXISTS sessions (
   session_duration REAL NOT NULL,
   deviation REAL,
   dominant_feature TEXT,
-  high_deviation INTEGER NOT NULL DEFAULT 0
+  high_deviation INTEGER NOT NULL DEFAULT 0,
+  long_pause_rate REAL NOT NULL DEFAULT 0,
+  correction_burst_rate REAL NOT NULL DEFAULT 0,
+  speed_decay REAL NOT NULL DEFAULT 0,
+  smoothed_combined_z REAL
 );
 CREATE TABLE IF NOT EXISTS insights (
   id TEXT PRIMARY KEY,
@@ -110,6 +114,20 @@ export async function createDatabase(filePath) {
     db.run("ALTER TABLE users ADD COLUMN recovery_code TEXT");
   } catch (_) { /* column already exists */ }
 
+  // Migration: add analysis upgrade columns to sessions
+  try {
+    db.run("ALTER TABLE sessions ADD COLUMN long_pause_rate REAL NOT NULL DEFAULT 0");
+  } catch (_) { /* column already exists */ }
+  try {
+    db.run("ALTER TABLE sessions ADD COLUMN correction_burst_rate REAL NOT NULL DEFAULT 0");
+  } catch (_) { /* column already exists */ }
+  try {
+    db.run("ALTER TABLE sessions ADD COLUMN speed_decay REAL NOT NULL DEFAULT 0");
+  } catch (_) { /* column already exists */ }
+  try {
+    db.run("ALTER TABLE sessions ADD COLUMN smoothed_combined_z REAL");
+  } catch (_) { /* column already exists */ }
+
   function persist() {
     if (!filePath) return;
     fs.mkdirSync(path.dirname(filePath), { recursive: true });
@@ -162,6 +180,10 @@ export function rowToSession(row) {
     deviation: row.deviation,
     dominantFeature: row.dominant_feature,
     highDeviation: Boolean(row.high_deviation),
+    longPauseRate: row.long_pause_rate ?? 0,
+    correctionBurstRate: row.correction_burst_rate ?? 0,
+    speedDecay: row.speed_decay ?? 0,
+    smoothedCombinedZ: row.smoothed_combined_z ?? null,
   };
 }
 

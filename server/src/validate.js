@@ -19,6 +19,9 @@ export const FEATURE_BOUNDS = {
   correctionRate: [0, 1],
   timingVariance: [0, 5],
   sessionDuration: [0, 86400],
+  longPauseRate: [0, 1],
+  correctionBurstRate: [0, 1],
+  speedDecay: [-5, 5],
 };
 
 export function hasForbiddenTextFields(payload) {
@@ -38,6 +41,11 @@ export function sanitizeSession(payload) {
   for (const [key, [min, max]] of Object.entries(FEATURE_BOUNDS)) {
     const value = Number(payload?.[key]);
     if (!Number.isFinite(value)) {
+      // New features default to 0 for backward compatibility
+      if (key === "longPauseRate" || key === "correctionBurstRate" || key === "speedDecay") {
+        session[key] = 0;
+        continue;
+      }
       const error = new Error(`Missing or invalid feature: ${key}`);
       error.status = 400;
       error.code = "INVALID_FEATURE";

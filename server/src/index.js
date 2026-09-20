@@ -6,9 +6,11 @@ import cors from "cors";
 import dotenv from "dotenv";
 import { rowToSession } from "./pg.js";
 import { createDatabase as createSqliteDatabase } from "./db.js";
-import { buildBaseline, campusAggregate, scoreSession, weekStart, HIGH_DEVIATION } from "./stats.js";
-import { generateInsight } from "./insights.js";
-import { assertUserId, sanitizeSession } from "./validate.js";
+import { campusAggregate, weekStart as weekStartLegacy, HIGH_DEVIATION } from "./stats.js";
+import { generateInsight } from "../lib/insights.js";
+import { assertUserId } from "./validate.js";
+import { sanitizeSession } from "../lib/validate.js";
+import { buildBaseline, scoreSession, scoreSmoothed, summarizeDirection, weekStart } from "../lib/baseline.js";
 import { seedDatabase } from "./seed.js";
 import { initCache, getCachedBaseline, setCachedBaseline, invalidateBaseline, invalidateAllBaselines, closeCache } from "./cache.js";
 import {
@@ -253,14 +255,25 @@ export async function createApp(database) {
       const features = sanitizeSession(req.body);
       const historical = await sessionsFor(database, userId);
       const baseline = buildBaseline(historical);
+
+      // Score this single session (for storage and recent-sessions table)
       const score = scoreSession(features, baseline);
+
+      // Multi-session smoothing: average of last 3 sessions (including this one)
+      // Used for weekly insights and intervention triggers
+      const allSessions = [...historical, features];
+      const smoothedScore = scoreSmoothed(allSessions, baseline);
+      const smoothedDeviation = smoothedScore.deviation;
+      const smoothedCombinedZ = smoothedScore._rawCombinedZ ?? null;
+
       const id = crypto.randomUUID();
       const createdAt = new Date().toISOString();
       await database.run(
         `INSERT INTO sessions (
           id, user_id, created_at, typing_speed, mean_pause_ms, pause_std_dev_ms,
-          correction_rate, timing_variance, session_duration, deviation, dominant_feature, high_deviation
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
+          correction_rate, timing_variance, session_duration, deviation, dominant_feature, high_deviation,
+          long_pause_rate, correction_burst_rate, speed_decay, smoothed_combined_z
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
         [
           id,
           userId,
@@ -274,6 +287,10 @@ export async function createApp(database) {
           score.deviation,
           score.dominantFeature,
           score.highDeviation ? 1 : 0,
+          features.longPauseRate ?? 0,
+          features.correctionBurstRate ?? 0,
+          features.speedDecay ?? 0,
+          smoothedCombinedZ,
         ],
       );
 
@@ -285,6 +302,8 @@ export async function createApp(database) {
         createdAt,
         ...features,
         ...score,
+        // Smoothed deviation for stable triggers (weekly insight uses this)
+        smoothedDeviation,
         baseline,
       });
     } catch (error) {
@@ -302,6 +321,11 @@ export async function createApp(database) {
       const baseline = await getBaselineCached(database, userId, sessions);
       const latest = sessions.at(-1);
       const score = latest ? scoreSession(latest, baseline) : { ready: false };
+
+      // Multi-session smoothing for stable weekly insights
+      const smoothedScore = scoreSmoothed(sessions, baseline);
+      const direction = score.ready ? summarizeDirection(score.zScores) : null;
+
       const week = weekStart(new Date().toISOString());
       const existing = await database.get(
         "SELECT * FROM insights WHERE user_id = $1 AND week_start = $2",
@@ -313,6 +337,8 @@ export async function createApp(database) {
         if (score.ready && existing.source === "fallback") {
           const refreshed = await generateInsight({
             score,
+            smoothed: smoothedScore,
+            direction,
             baseline: baseline.ready ? baseline.features : null,
             latest: latest
               ? {
@@ -321,6 +347,9 @@ export async function createApp(database) {
                   pauseStdDevMs: latest.pauseStdDevMs,
                   correctionRate: latest.correctionRate,
                   timingVariance: latest.timingVariance,
+                  longPauseRate: latest.longPauseRate,
+                  correctionBurstRate: latest.correctionBurstRate,
+                  speedDecay: latest.speedDecay,
                 }
               : null,
             previousFeedback: null,
@@ -359,6 +388,8 @@ export async function createApp(database) {
         : null;
       const generated = await generateInsight({
         score,
+        smoothed: smoothedScore,
+        direction,
         baseline: baseline.ready ? baseline.features : null,
         latest: latest
           ? {
@@ -367,6 +398,9 @@ export async function createApp(database) {
               pauseStdDevMs: latest.pauseStdDevMs,
               correctionRate: latest.correctionRate,
               timingVariance: latest.timingVariance,
+              longPauseRate: latest.longPauseRate,
+              correctionBurstRate: latest.correctionBurstRate,
+              speedDecay: latest.speedDecay,
             }
           : null,
         previousFeedback,
