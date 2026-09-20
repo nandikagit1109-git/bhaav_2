@@ -15,6 +15,7 @@ import {
   deleteUserData,
   reseedDemoData,
   setCampusPulseOptIn,
+  fetchMyRecoveryCode,
 } from '../api/client';
 import { resetIntro } from './IntroSequence';
 
@@ -46,6 +47,8 @@ export default function SettingsModal({ isOpen, onClose, onDataReset, onNavigate
   const [statusMessage, setStatusMessage] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [campusPulseOptIn, setCampusPulseOptInState] = useState(false);
+  const [myRecoveryCode, setMyRecoveryCode] = useState(null);
+  const [recoveryLoading, setRecoveryLoading] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
@@ -261,6 +264,39 @@ export default function SettingsModal({ isOpen, onClose, onDataReset, onNavigate
             </div>
           </div>
         )}
+
+        {/* Recovery code */}
+        <div className="pt-4 border-t border-stone-border/60 space-y-3">
+          <div className="font-serif text-lg text-ink-950">Your recovery code</div>
+          <p className="text-xs text-ink-500">
+            This code lets you restore your data on a new device. Keep it safe.
+          </p>
+          {myRecoveryCode ? (
+            <div className="bg-paper-100 border border-stone-border rounded-xl p-4 text-center">
+              <p className="font-mono text-xl sm:text-2xl tracking-[0.08em] text-ink-950 font-medium">
+                {myRecoveryCode}
+              </p>
+            </div>
+          ) : (
+            <button
+              onClick={async () => {
+                setRecoveryLoading(true);
+                try {
+                  const data = await fetchMyRecoveryCode();
+                  setMyRecoveryCode(data.recoveryCode);
+                } catch (err) {
+                  setStatusMessage('Could not load recovery code.');
+                  setTimeout(() => setStatusMessage(null), 3000);
+                }
+                setRecoveryLoading(false);
+              }}
+              disabled={recoveryLoading}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-ink-900/25 text-ink-800 hover:border-ink-900 hover:bg-ink-900 hover:text-paper-50 text-xs font-mono uppercase tracking-[0.14em] transition-colors disabled:opacity-50"
+            >
+              {recoveryLoading ? 'Loading...' : 'Find my recovery code'}
+            </button>
+          )}
+        </div>
 
         {/* Watch intro again */}
         <div className="pt-2 border-t border-stone-border/60">

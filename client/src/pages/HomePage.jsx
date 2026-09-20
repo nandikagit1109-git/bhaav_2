@@ -581,6 +581,14 @@ function ChapterEnd({ onNavigate }) {
             and leaves the rest to you.
           </p>
         </FadeUp>
+        <FadeUp delay={0.5} className="mt-6">
+          <button
+            onClick={() => onNavigate('restore')}
+            className="text-[11px] font-mono uppercase tracking-[0.12em] text-ink-400 hover:text-ink-700 transition-colors"
+          >
+            Already have a code? Restore your data
+          </button>
+        </FadeUp>
       </div>
     </section>
   );

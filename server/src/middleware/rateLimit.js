@@ -77,3 +77,17 @@ export const generalWriteRateLimit = rateLimit({
     retryAfterSeconds: 60,
   },
 });
+
+// ── Recovery endpoint: 5 attempts/hr per IP ─────────────────────
+// The one place brute-force could expose someone's data.
+export const recoveryRateLimit = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: (req) => req.ip,
+  message: {
+    error: "Too many recovery attempts. Please try again later.",
+    retryAfterSeconds: 3600,
+  },
+});

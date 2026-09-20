@@ -16,7 +16,9 @@ import {
   insightRateLimit,
   feedbackRateLimit,
   generalWriteRateLimit,
+  recoveryRateLimit,
 } from "./middleware/rateLimit.js";
+import { generateUniqueRecoveryCode } from "./recovery.js";
 import { requireAuth } from "./middleware/auth.js";
 import { createAuthRouter } from "./routes/auth.js";
 
@@ -35,8 +37,22 @@ function userIdFrom(req) {
 
 async function ensureUser(db, userId) {
   const existing = await db.get("SELECT id FROM users WHERE id = $1", [userId]);
+  let isNew = false;
   if (!existing) {
-    await db.run("INSERT INTO users (id, created_at) VALUES ($1, $2)", [userId, new Date().toISOString()]);
+    // Auto-generate a recovery code so the user can recover data later
+    const recoveryCode = await generateUniqueRecoveryCode(db);
+    await db.run(
+      "INSERT INTO users (id, created_at, recovery_code) VALUES ($1, $2, $3)",
+      [userId, new Date().toISOString(), recoveryCode],
+    );
+    isNew = true;
+  } else if (!existing.recovery_code) {
+    // Backfill recovery code for existing users who don't have one yet
+    const recoveryCode = await generateUniqueRecoveryCode(db);
+    await db.run(
+      "UPDATE users SET recovery_code = $1 WHERE id = $2",
+      [recoveryCode, userId],
+    );
   }
   const hasSettings = await db.get("SELECT user_id FROM settings WHERE user_id = $1", [userId]);
   if (!hasSettings) {
@@ -46,6 +62,7 @@ async function ensureUser(db, userId) {
       [userId, new Date().toISOString()],
     );
   }
+  return isNew;
 }
 
 async function sessionsFor(db, userId) {
@@ -153,11 +170,32 @@ export async function createApp(database) {
     });
   });
 
+  // ── Recovery: get user_id by recovery code (rate-limited) ─────
+  app.get("/api/users/recover/:recoveryCode", recoveryRateLimit, async (req, res) => {
+    try {
+      const { recoveryCode } = req.params;
+      if (!recoveryCode || typeof recoveryCode !== "string") {
+        return res.status(400).json({ error: "Invalid recovery code" });
+      }
+      const user = await database.get(
+        "SELECT id FROM users WHERE recovery_code = $1",
+        [recoveryCode],
+      );
+      if (!user) {
+        // Never reveal whether a similar code exists
+        return res.status(404).json({ error: "Recovery code not found" });
+      }
+      res.json({ userId: user.id });
+    } catch (error) {
+      res.status(500).json({ error: "Recovery lookup failed" });
+    }
+  });
+
   // ── State: sessions + baseline + insight + settings ───────────
   app.get("/api/state", requireAuth, async (req, res) => {
     try {
       const userId = userIdFrom(req);
-      await ensureUser(database, userId);
+      const isNew = await ensureUser(database, userId);
       const sessions = await sessionsFor(database, userId);
       const baseline = await getBaselineCached(database, userId, sessions);
       const latest = sessions.at(-1) || null;
@@ -169,8 +207,16 @@ export async function createApp(database) {
       const feedback = latestInsight
         ? await database.get("SELECT * FROM feedback WHERE insight_id = $1", [latestInsight.id])
         : null;
+      // Fetch recovery code (only returned for brand-new users so the frontend can show it once)
+      let recoveryCode = null;
+      if (isNew) {
+        const user = await database.get("SELECT recovery_code FROM users WHERE id = $1", [userId]);
+        recoveryCode = user?.recovery_code || null;
+      }
       res.json({
         userId,
+        isNewUser: isNew,
+        recoveryCode,
         settings: await settingsFor(database, userId),
         baseline,
         sessions,
@@ -369,6 +415,21 @@ export async function createApp(database) {
       res.json({ ok: true, response });
     } catch (error) {
       res.status(error.status || 500).json({ error: error.status ? error.message : "Unable to save feedback" });
+    }
+  });
+
+  // ── Get my recovery code (auth required) ──────────────────────
+  app.get("/api/me/recovery-code", requireAuth, async (req, res) => {
+    try {
+      const userId = userIdFrom(req);
+      const user = await database.get(
+        "SELECT recovery_code FROM users WHERE id = $1",
+        [userId],
+      );
+      if (!user) return res.status(404).json({ error: "User not found" });
+      res.json({ recoveryCode: user.recovery_code });
+    } catch (error) {
+      res.status(500).json({ error: "Could not fetch recovery code" });
     }
   });
 

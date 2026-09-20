@@ -326,3 +326,28 @@ export async function resetPassword(token, password) {
   }
   return res.json();
 }
+
+// ── Recovery Code ──────────────────────────────────
+/**
+ * Look up a recovery code and return the associated user_id.
+ * @param {string} code — e.g. "coral-window-42"
+ * @returns {Promise<{userId: string}>}
+ */
+export async function recoverByCode(code) {
+  const res = await fetch(`${API_BASE}/users/recover/${encodeURIComponent(code)}`);
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error || 'Recovery code not found');
+  }
+  return res.json();
+}
+
+/**
+ * Get the current user's recovery code (from the users table).
+ * @returns {Promise<{recoveryCode: string}>}
+ */
+export async function fetchMyRecoveryCode() {
+  const res = await fetch(`${API_BASE}/me/recovery-code`, { headers: userHeaders() });
+  if (!res.ok) throw new Error('Could not fetch recovery code');
+  return res.json();
+}

@@ -22,7 +22,8 @@ CREATE TABLE IF NOT EXISTS users (
   email TEXT UNIQUE,
   password_hash TEXT,
   display_name TEXT NOT NULL DEFAULT '',
-  email_verified INTEGER NOT NULL DEFAULT 0
+  email_verified INTEGER NOT NULL DEFAULT 0,
+  recovery_code TEXT UNIQUE
 );
 CREATE TABLE IF NOT EXISTS settings (
   user_id TEXT PRIMARY KEY,
@@ -103,6 +104,10 @@ export async function createDatabase(filePath) {
   } catch (_) { /* column already exists */ }
   try {
     db.run("ALTER TABLE users ADD COLUMN email_verified INTEGER NOT NULL DEFAULT 0");
+  } catch (_) { /* column already exists */ }
+  // Migration: add recovery_code column
+  try {
+    db.run("ALTER TABLE users ADD COLUMN recovery_code TEXT");
   } catch (_) { /* column already exists */ }
 
   function persist() {

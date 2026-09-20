@@ -10,12 +10,15 @@ import DashboardPage from './pages/DashboardPage';
 import CampusPulsePage from './pages/CampusPulsePage';
 import PrivacyPage from './pages/PrivacyPage';
 import CrisisPage from './pages/CrisisPage';
+import RestorePage from './pages/RestorePage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import PrivacyModal from './components/PrivacyModal';
 import SettingsModal from './components/SettingsModal';
 import TechArchitectureModal from './components/TechArchitectureModal';
 import TourOverlay from './components/TourOverlay';
 import IntroSequence, { hasSeenIntro, markIntroSeen } from './components/IntroSequence';
+import RecoveryCodeModal, { hasSeenRecoveryModal, markRecoverySeen } from './components/RecoveryCodeModal';
+import { fetchState } from './api/client';
 import { EASE } from './motion/primitives';
 
 export default function App() {
@@ -35,6 +38,8 @@ function AppContent() {
   const [sessionRefreshKey, setSessionRefreshKey] = useState(0);
   const [tourActive, setTourActive] = useState(false);
   const [showIntro, setShowIntro] = useState(() => !hasSeenIntro());
+  const [recoveryCode, setRecoveryCode] = useState(null);
+  const [showRecoveryModal, setShowRecoveryModal] = useState(false);
   const reduced = useReducedMotion();
 
   const handleNavigate = (viewId, sectionId) => {
@@ -66,6 +71,23 @@ function AppContent() {
     };
     document.title = titles[currentView] || titles.home;
   }, [currentView]);
+
+  // Check for recovery code on first authenticated load (new user creation)
+  useEffect(() => {
+    if (!isAuthenticated || showIntro) return;
+    // Only check once per session
+    if (sessionStorage.getItem('bhaav-recovery-checked') === '1') return;
+    sessionStorage.setItem('bhaav-recovery-checked', '1');
+
+    fetchState()
+      .then((state) => {
+        if (state.recoveryCode && !hasSeenRecoveryModal()) {
+          setRecoveryCode(state.recoveryCode);
+          setShowRecoveryModal(true);
+        }
+      })
+      .catch(() => { /* silent — not critical */ });
+  }, [isAuthenticated, showIntro]);
 
   const pageVariants = {
     initial: reduced ? { opacity: 1 } : { opacity: 0, y: 14 },
@@ -122,6 +144,10 @@ function AppContent() {
                 onOpenSettings={() => setIsSettingsModalOpen(true)}
                 onOpenHowItWorks={() => setIsTechModalOpen(true)}
               />
+            )}
+
+            {currentView === 'restore' && (
+              <RestorePage onNavigate={handleNavigate} />
             )}
 
             {currentView === 'journal' && (
@@ -211,6 +237,13 @@ function AppContent() {
           }}
         />
       )}
+
+      {/* Recovery code modal — shown once after first user creation */}
+      <RecoveryCodeModal
+        isOpen={showRecoveryModal}
+        recoveryCode={recoveryCode}
+        onClose={() => setShowRecoveryModal(false)}
+      />
     </div>
   );
 }

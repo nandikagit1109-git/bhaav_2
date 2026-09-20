@@ -100,7 +100,8 @@ async function runMigrations(sql) {
       email                 TEXT UNIQUE,
       password_hash         TEXT,
       display_name          TEXT NOT NULL DEFAULT '',
-      email_verified        INTEGER NOT NULL DEFAULT 0
+      email_verified        INTEGER NOT NULL DEFAULT 0,
+      recovery_code         TEXT UNIQUE
     );
 
     CREATE TABLE IF NOT EXISTS settings (
@@ -166,6 +167,11 @@ async function runMigrations(sql) {
     CREATE INDEX IF NOT EXISTS idx_users_campus_opt_in
       ON users (campus_pulse_opt_in)
       WHERE campus_pulse_opt_in = 1;
+  `;
+
+  // Migration: add recovery_code column if missing
+  await sql`
+    ALTER TABLE users ADD COLUMN IF NOT EXISTS recovery_code TEXT UNIQUE
   `;
 }
 
