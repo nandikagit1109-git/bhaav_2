@@ -173,6 +173,9 @@ async function runMigrations(sql) {
   await sql`
     ALTER TABLE users ADD COLUMN IF NOT EXISTS recovery_code TEXT UNIQUE
   `;
+
+  // Backfill: existing users without recovery codes get one on their next request.
+  // The ensureUser function in index.js handles this automatically.
 }
 
 /**

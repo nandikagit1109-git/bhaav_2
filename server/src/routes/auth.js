@@ -12,6 +12,7 @@ import crypto from "node:crypto";
 import express from "express";
 import { Resend } from "resend";
 import { signToken, requireAuth } from "../middleware/auth.js";
+import { generateUniqueRecoveryCode } from "../recovery.js";
 
 // Resend email client — initialized lazily so missing key doesn't crash local dev
 let resend = null;
@@ -70,11 +71,14 @@ export function createAuthRouter(database) {
       const userId = `user_${crypto.randomBytes(12).toString("hex")}`;
       const name = (displayName || normalizedEmail.split("@")[0]).slice(0, 80);
 
+      // Generate recovery code for anonymous-to-account migration
+      const recoveryCode = await generateUniqueRecoveryCode(database);
+
       // Insert user
       await database.run(
-        `INSERT INTO users (id, email, password_hash, display_name, created_at)
-         VALUES ($1, $2, $3, $4, $5)`,
-        [userId, normalizedEmail, passwordHash, name, new Date().toISOString()],
+        `INSERT INTO users (id, email, password_hash, display_name, recovery_code, created_at)
+         VALUES ($1, $2, $3, $4, $5, $6)`,
+        [userId, normalizedEmail, passwordHash, name, recoveryCode, new Date().toISOString()],
       );
 
       // Create default settings
