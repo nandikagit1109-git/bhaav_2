@@ -1,11 +1,14 @@
 // ═══════════════════════════════════════════════════════════════════
-// BHAAV — JWT Authentication Middleware
+// BHAAV — Authentication Middleware
 //
-// Verifies the Authorization: Bearer <token> header on protected routes.
-// Attaches the decoded userId to req.userId for downstream handlers.
+// Primary identity: x-bhaav-user header (anonymous user_id from localStorage)
+// Fallback: JWT token (for users who signed up with email/password)
+//
+// requireAuth extracts userId from EITHER source. If neither is present,
+// it falls back to "demo" (backward compatibility).
 //
 // Environment:
-//   JWT_SECRET — signing key (required; generate a strong random string)
+//   JWT_SECRET — signing key (used only for email/password auth, optional)
 //   JWT_EXPIRES_IN — token lifetime (default: "7d")
 // ═══════════════════════════════════════════════════════════════════
 
@@ -34,24 +37,38 @@ export function verifyToken(token) {
 }
 
 /**
- * Express middleware: require a valid JWT.
- * Attaches req.userId from the token's `sub` claim.
- * Returns 401 if missing/invalid.
+ * Express middleware: extract userId from x-bhaav-user header or JWT token.
+ *
+ * This middleware NEVER returns 401 — it always calls next().
+ * If a valid user identity is found, it's attached to req.userId.
+ * If not, req.userId is set to "demo" for backward compatibility.
+ *
+ * The app works without any authentication. The user_id comes from
+ * the client's localStorage (sent via x-bhaav-user header).
  */
-export function requireAuth(req, res, next) {
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    return res.status(401).json({ error: "Authentication required" });
+export function requireAuth(req, _res, next) {
+  // Priority 1: x-bhaav-user header (anonymous model)
+  const headerUserId = req.header("x-bhaav-user");
+  if (headerUserId && typeof headerUserId === "string" && headerUserId.length <= 64) {
+    req.userId = headerUserId;
+    return next();
   }
 
-  const token = authHeader.slice(7);
-  try {
-    const payload = verifyToken(token);
-    req.userId = payload.sub;
-    next();
-  } catch (err) {
-    return res.status(401).json({ error: "Invalid or expired token" });
+  // Priority 2: JWT token (email/password model, optional)
+  const authHeader = req.headers.authorization;
+  if (authHeader && authHeader.startsWith("Bearer ")) {
+    try {
+      const payload = verifyToken(authHeader.slice(7));
+      req.userId = payload.sub;
+      return next();
+    } catch {
+      // Invalid token — fall through to demo
+    }
   }
+
+  // Priority 3: fallback (backward compatibility)
+  req.userId = "demo";
+  next();
 }
 
 /**

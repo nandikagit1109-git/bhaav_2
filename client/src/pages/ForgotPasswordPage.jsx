@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useAuth } from '../contexts/AuthContext';
 import { forgotPassword, resetPassword } from '../api/client';
 import { FadeUp } from '../motion/primitives';
 
@@ -22,8 +21,6 @@ export default function ForgotPasswordPage() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { login } = useAuth();
-
   const handleRequestSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -58,15 +55,9 @@ export default function ForgotPasswordPage() {
 
     try {
       await resetPassword(tokenFromUrl, password);
-      setSuccess('Password updated! Signing you in...');
-      // Auto-login after successful reset
-      setTimeout(async () => {
-        try {
-          await login(email, password);
-        } catch {
-          // If auto-login fails, redirect to login
-          window.location.href = '/';
-        }
+      setSuccess('Password updated! Redirecting...');
+      setTimeout(() => {
+        window.location.href = '/';
       }, 1500);
     } catch (err) {
       setError(err.message);

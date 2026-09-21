@@ -1,107 +1,48 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback } from 'react';
 
 const AuthContext = createContext(null);
 
-const API_BASE = '/api';
+const STORAGE_KEY = 'bhaav_user_id';
 
 /**
- * AuthProvider — manages JWT token, user state, and login/logout actions.
- * Wraps the entire app and provides auth state to all children.
+ * Generate a random anonymous user ID.
+ */
+function generateUserId() {
+  return 'u_' + crypto.randomUUID().replace(/-/g, '').slice(0, 16);
+}
+
+/**
+ * AuthProvider — lightweight anonymous user identity.
+ *
+ * No login, no signup, no JWT, no passwords.
+ * Each person gets a random user_id stored in localStorage.
+ * The recovery-code system lets them restore access on a new device.
+ *
+ * We keep the "AuthContext" name for minimal churn, but this is
+ * purely an identity provider — not an authentication gate.
  */
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
-  const [token, setToken] = useState(() => localStorage.getItem('bhaav-token'));
-  const [loading, setLoading] = useState(true);
-
-  // Verify token on mount
-  useEffect(() => {
-    if (!token) {
-      setLoading(false);
-      return;
+  const [userId] = useState(() => {
+    let id = localStorage.getItem(STORAGE_KEY);
+    if (!id) {
+      id = generateUserId();
+      localStorage.setItem(STORAGE_KEY, id);
     }
+    return id;
+  });
 
-    fetch(`${API_BASE}/auth/me`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then(res => {
-        if (!res.ok) throw new Error('Invalid token');
-        return res.json();
-      })
-      .then(data => {
-        setUser(data.user);
-        setLoading(false);
-      })
-      .catch(() => {
-        // Token is invalid — clear it
-        localStorage.removeItem('bhaav-token');
-        setToken(null);
-        setUser(null);
-        setLoading(false);
-      });
-  }, [token]);
-
-  const login = useCallback(async (email, password) => {
-    const res = await fetch(`${API_BASE}/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
-    });
-
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Login failed');
-
-    localStorage.setItem('bhaav-token', data.token);
-    setToken(data.token);
-    setUser(data.user);
-    return data.user;
-  }, []);
-
-  const signup = useCallback(async (email, password, displayName) => {
-    const res = await fetch(`${API_BASE}/auth/signup`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, displayName }),
-    });
-
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Signup failed');
-
-    localStorage.setItem('bhaav-token', data.token);
-    setToken(data.token);
-    setUser(data.user);
-    return data.user;
-  }, []);
-
-  const logout = useCallback(() => {
-    localStorage.removeItem('bhaav-token');
-    setToken(null);
-    setUser(null);
-  }, []);
-
-  // Provide token for API calls
-  const getToken = useCallback(() => token, [token]);
-
-  const value = {
-    user,
-    token,
-    loading,
-    isAuthenticated: !!user,
-    login,
-    signup,
-    logout,
-    getToken,
-  };
+  const user = { id: userId };
 
   return (
-    <AuthContext.Provider value={value}>
+    <AuthContext.Provider value={{ user, loading: false, isAuthenticated: true }}>
       {children}
     </AuthContext.Provider>
   );
 }
 
 /**
- * Hook to access auth context.
- * Must be used inside AuthProvider.
+ * Hook to access user context.
+ * Provides: { user: { id }, loading, isAuthenticated }
  */
 export function useAuth() {
   const context = useContext(AuthContext);

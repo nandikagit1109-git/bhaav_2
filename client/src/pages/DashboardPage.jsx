@@ -3,7 +3,6 @@ import TrendChart from '../components/TrendChart';
 import WeeklyInsightCard from '../components/WeeklyInsightCard';
 import PeerCountCard from '../components/PeerCountCard';
 import { InkPath } from '../motion/primitives';
-import { useAuth } from '../contexts/AuthContext';
 import {
   fetchSessions,
   fetchBaseline,
@@ -58,7 +57,6 @@ const devBadge = (score) => {
 };
 
 export default function DashboardPage({ onNavigateToJournal, onOpenPrivacyModal }) {
-  const { user } = useAuth();
   const [sessions, setSessions] = useState([]);
   const [baseline, setBaseline] = useState(null);
   const [insight, setInsight] = useState(null);
@@ -67,7 +65,6 @@ export default function DashboardPage({ onNavigateToJournal, onOpenPrivacyModal 
   const [insightLoading, setInsightLoading] = useState(true);
 
   useEffect(() => {
-    if (!user?.id) return;
     let cancelled = false;
     async function loadDashboardData() {
       setIsLoading(true);
@@ -109,7 +106,7 @@ export default function DashboardPage({ onNavigateToJournal, onOpenPrivacyModal 
     }
     loadDashboardData();
     return () => { cancelled = true; };
-  }, [user?.id]);
+  }, []);
 
   const latestSession = sessions.length > 0 ? sessions[sessions.length - 1] : null;
   const headline = headlineFor(latestSession, sessions.length);

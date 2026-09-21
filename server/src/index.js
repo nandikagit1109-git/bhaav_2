@@ -31,8 +31,8 @@ const PORT = Number(process.env.PORT || 8787);
 const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || "http://localhost:5173";
 
 function userIdFrom(req) {
-  // Use authenticated user ID from JWT (set by requireAuth middleware)
-  if (req.userId) return req.userId;
+  // requireAuth middleware already extracted userId from x-bhaav-user or JWT
+  if (req.userId && req.userId !== "demo") return req.userId;
   // Fallback for backward compatibility (demo mode)
   return assertUserId(req.header("x-bhaav-user") || "demo");
 }

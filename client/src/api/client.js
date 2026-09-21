@@ -5,9 +5,17 @@
 
 const API_BASE = '/api';
 
-// Token management — reads from localStorage
-function getToken() {
-  return localStorage.getItem('bhaav-token');
+/**
+ * Get or create the anonymous user ID.
+ * This is the ONLY credential — no JWT, no password, no email required.
+ */
+function getUserId() {
+  let id = localStorage.getItem('bhaav_user_id');
+  if (!id) {
+    id = 'u_' + crypto.randomUUID().replace(/-/g, '').slice(0, 16);
+    localStorage.setItem('bhaav_user_id', id);
+  }
+  return id;
 }
 
 /* ── Deviation scale ─────────────────────────────────────────────────
@@ -32,10 +40,10 @@ export function scoreToSigma(score) {
 }
 
 function userHeaders() {
-  const headers = { 'Content-Type': 'application/json' };
-  const token = getToken();
-  if (token) headers['Authorization'] = `Bearer ${token}`;
-  return headers;
+  return {
+    'Content-Type': 'application/json',
+    'x-bhaav-user': getUserId(),
+  };
 }
 
 // ── Health ──────────────────────────────────────────

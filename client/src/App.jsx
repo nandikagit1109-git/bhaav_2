@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { AuthProvider } from './contexts/AuthContext';
 import Navbar from './components/Navbar';
 import CustomCursor from './components/CustomCursor';
-import AuthPage from './pages/AuthPage';
 import HomePage from './pages/HomePage';
 import JournalPage from './pages/JournalPage';
 import DashboardPage from './pages/DashboardPage';
@@ -30,7 +29,6 @@ export default function App() {
 }
 
 function AppContent() {
-  const { isAuthenticated, loading } = useAuth();
   const [currentView, setCurrentView] = useState('home');
   const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
@@ -72,9 +70,9 @@ function AppContent() {
     document.title = titles[currentView] || titles.home;
   }, [currentView]);
 
-  // Check for recovery code on first authenticated load (new user creation)
+  // Check for recovery code on first load (new user creation)
   useEffect(() => {
-    if (!isAuthenticated || showIntro) return;
+    if (showIntro) return;
     // Only check once per session
     if (sessionStorage.getItem('bhaav-recovery-checked') === '1') return;
     sessionStorage.setItem('bhaav-recovery-checked', '1');
@@ -87,34 +85,13 @@ function AppContent() {
         }
       })
       .catch(() => { /* silent — not critical */ });
-  }, [isAuthenticated, showIntro]);
+  }, [showIntro]);
 
   const pageVariants = {
     initial: reduced ? { opacity: 1 } : { opacity: 0, y: 14 },
     animate: { opacity: 1, y: 0 },
     exit: reduced ? { opacity: 0 } : { opacity: 0, y: -10 },
   };
-
-  // Show loading state
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-paper-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-8 h-8 border-2 border-ink-300 border-t-ink-900 rounded-full animate-spin mx-auto" />
-          <p className="mt-4 text-ink-400 font-mono text-xs uppercase tracking-wider">Loading...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Show auth page if not authenticated
-  if (!isAuthenticated) {
-    // Forgot password page (accessible without auth)
-    if (window.location.pathname === '/forgot-password') {
-      return <ForgotPasswordPage />;
-    }
-    return <AuthPage />;
-  }
 
   return (
     <div className="min-h-screen bg-paper-100 text-ink-900 flex flex-col font-sans paper-grain">
