@@ -10,7 +10,6 @@ import CampusPulsePage from './pages/CampusPulsePage';
 import PrivacyPage from './pages/PrivacyPage';
 import CrisisPage from './pages/CrisisPage';
 import RestorePage from './pages/RestorePage';
-import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import PrivacyModal from './components/PrivacyModal';
 import SettingsModal from './components/SettingsModal';
 import TechArchitectureModal from './components/TechArchitectureModal';

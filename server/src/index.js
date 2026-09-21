@@ -22,7 +22,6 @@ import {
 } from "./middleware/rateLimit.js";
 import { generateUniqueRecoveryCode } from "./recovery.js";
 import { requireAuth } from "./middleware/auth.js";
-import { createAuthRouter } from "./routes/auth.js";
 
 dotenv.config({ path: path.join(path.dirname(fileURLToPath(import.meta.url)), "../../.env") });
 
@@ -132,10 +131,6 @@ export async function createApp(database) {
     res.setHeader("Cache-Control", "no-store");
     next();
   });
-
-  // ── Auth routes (no auth required) ────────────────────────────
-  const authRouter = createAuthRouter(database);
-  app.use("/api/auth", authRouter);
 
   // ── Health check (no rate limit) ──────────────────────────────
   app.get("/api/health", (_req, res) => {
