@@ -22,6 +22,7 @@ export const FEATURE_BOUNDS = {
   longPauseRate: [0, 1],
   correctionBurstRate: [0, 1],
   speedDecay: [-5, 5],
+  sessionDurationMinutes: [0, 1440],
 };
 
 export function hasForbiddenTextFields(payload) {
@@ -42,7 +43,7 @@ export function sanitizeSession(payload) {
     const value = Number(payload?.[key]);
     if (!Number.isFinite(value)) {
       // New features default to 0 for backward compatibility
-      if (key === "longPauseRate" || key === "correctionBurstRate" || key === "speedDecay") {
+      if (key === "longPauseRate" || key === "correctionBurstRate" || key === "speedDecay" || key === "sessionDurationMinutes") {
         session[key] = 0;
         continue;
       }

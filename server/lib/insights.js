@@ -71,6 +71,16 @@ const CALM_COPY = {
 };
 
 /**
+ * NOTE: We intentionally do NOT implement:
+ * - Any feature claiming backspace rate alone indicates mood state
+ *   (Liu et al., JMIR 2024 found raw backspace rate did not significantly
+ *   differ between groups — only multi-feature patterns were predictive)
+ * - Any claim that keystroke data can predict specific clinical conditions
+ *   (adolescent studies found weak/no predictive associations — this is why
+ *   Bhaav stays framed as self-awareness, never diagnostic)
+ */
+
+/**
  * Mixed copy — when there are both concerning and favorable signals.
  */
 const MIXED_COPY = {
@@ -159,6 +169,12 @@ export function insightPrompt(payload) {
     // Latest session features (for context)
     latestSession: latest,
 
+    // Session duration context (BiAffect 2020 found shorter sessions associated
+    // with depression severity — include baseline vs current so Claude can note
+    // duration shifts when relevant)
+    baselineSessionDurationMinutes: baseline?.features?.sessionDurationMinutes?.median ?? null,
+    currentSessionDurationMinutes: latest?.sessionDurationMinutes ?? null,
+
     // User preferences
     supportLevel,
     previousFeedback,
@@ -174,6 +190,11 @@ IMPORTANT: The "direction" field tells you whether changes are concerning (worse
 - If direction.overall is "concerning", note the specific concern honestly but gently.
 - If direction.overall is "mixed", acknowledge both the shifts and what's stayed steady.
 - If direction.overall is "neutral" or deviation is low, focus on consistency.
+
+Session duration context: The baselineSessionDurationMinutes is the user's typical session length.
+The currentSessionDurationMinutes is this week's average. Shorter sessions can indicate lower
+energy or engagement — mention this if it's notably shorter than baseline, but never frame it
+as a clinical symptom.
 
 Write two short sentences for students/young adults. Tone: quiet, specific, non-alarmist.
 

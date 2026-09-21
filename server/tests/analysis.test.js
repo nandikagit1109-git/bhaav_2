@@ -579,6 +579,7 @@ test("sanitizeSession accepts new feature fields", () => {
     correctionBurstRate: 0.03,
     speedDecay: 0.1,
     sessionDuration: 120,
+    sessionDurationMinutes: 2,
   };
 
   const session = sanitizeSession(payload);
@@ -586,6 +587,7 @@ test("sanitizeSession accepts new feature fields", () => {
   assert.equal(session.longPauseRate, 0.2);
   assert.equal(session.correctionBurstRate, 0.03);
   assert.equal(session.speedDecay, 0.1);
+  assert.equal(session.sessionDurationMinutes, 2);
 });
 
 test("sanitizeSession defaults new features to 0 if missing", () => {
@@ -603,6 +605,7 @@ test("sanitizeSession defaults new features to 0 if missing", () => {
   assert.equal(session.longPauseRate, 0);
   assert.equal(session.correctionBurstRate, 0);
   assert.equal(session.speedDecay, 0);
+  assert.equal(session.sessionDurationMinutes, 0);
 });
 
 test("sanitizeSession rejects forbidden text fields", () => {
@@ -659,12 +662,13 @@ test("insightPrompt includes directional info", () => {
 // Backward Compatibility Tests
 // ═══════════════════════════════════════════════════════════════════
 
-test("FEATURE_KEYS includes all 8 features", () => {
-  assert.equal(FEATURE_KEYS.length, 8);
+test("FEATURE_KEYS includes all 9 features", () => {
+  assert.equal(FEATURE_KEYS.length, 9);
   assert.ok(FEATURE_KEYS.includes("typingSpeed"));
   assert.ok(FEATURE_KEYS.includes("longPauseRate"));
   assert.ok(FEATURE_KEYS.includes("correctionBurstRate"));
   assert.ok(FEATURE_KEYS.includes("speedDecay"));
+  assert.ok(FEATURE_KEYS.includes("sessionDurationMinutes"));
 });
 
 test("ORIGINAL_FEATURE_KEYS has the original 5", () => {

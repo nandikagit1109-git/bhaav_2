@@ -196,6 +196,21 @@ export function buildBaseline(sessions) {
 // ── Deviation Scoring ────────────────────────────────────────────────────────
 
 /**
+ * Weight multipliers for specific features whose standalone signal is weaker.
+ *
+ * correctionRate (backspace_rate): Liu et al. (JMIR 2024, n=128) found that raw
+ * backspace rate alone did NOT significantly differ between healthy and mood-disorder
+ * groups — only a derived multi-feature pattern was predictive. We apply a 0.6x
+ * weight to reflect this weaker standalone signal, while keeping the feature in the
+ * set because it contributes to the multi-feature picture.
+ *
+ * All other features use weight 1.0 (no adjustment).
+ */
+const FEATURE_WEIGHTS = {
+  correctionRate: 0.6,
+};
+
+/**
  * Score a single session against the baseline.
  *
  * Directional: only concerning-direction z-scores contribute to the combined score.
@@ -226,16 +241,19 @@ export function scoreSession(session, baseline) {
     const z = madZScore(session[key], baseline.features[key].median, baseline.features[key].mad);
     zScores[key] = round(z, 3);
 
+    // Apply feature-specific weight multiplier (e.g. correctionRate at 0.6x)
+    const weight = FEATURE_WEIGHTS[key] ?? 1.0;
+
     const direction = FEATURE_DIRECTION[key];
     if (direction === "neutral") {
       // Neutral features: magnitude matters, not direction
-      neutralZScores.push(Math.abs(z));
+      neutralZScores.push(Math.abs(z) * weight);
     } else if (direction === "up_concerning") {
       // Higher is concerning: only count positive z-scores
-      concerningZScores.push(Math.max(0, z));
+      concerningZScores.push(Math.max(0, z) * weight);
     } else if (direction === "down_concerning") {
       // Lower is concerning: only count negative z-scores (as positive magnitude)
-      concerningZScores.push(Math.max(0, -z));
+      concerningZScores.push(Math.max(0, -z) * weight);
     }
   }
 

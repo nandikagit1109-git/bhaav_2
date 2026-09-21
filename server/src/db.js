@@ -49,7 +49,8 @@ CREATE TABLE IF NOT EXISTS sessions (
   long_pause_rate REAL NOT NULL DEFAULT 0,
   correction_burst_rate REAL NOT NULL DEFAULT 0,
   speed_decay REAL NOT NULL DEFAULT 0,
-  smoothed_combined_z REAL
+  smoothed_combined_z REAL,
+  session_duration_minutes REAL NOT NULL DEFAULT 0
 );
 CREATE TABLE IF NOT EXISTS insights (
   id TEXT PRIMARY KEY,
@@ -127,6 +128,9 @@ export async function createDatabase(filePath) {
   try {
     db.run("ALTER TABLE sessions ADD COLUMN smoothed_combined_z REAL");
   } catch (_) { /* column already exists */ }
+  try {
+    db.run("ALTER TABLE sessions ADD COLUMN session_duration_minutes REAL NOT NULL DEFAULT 0");
+  } catch (_) { /* column already exists */ }
 
   function persist() {
     if (!filePath) return;
@@ -184,6 +188,7 @@ export function rowToSession(row) {
     correctionBurstRate: row.correction_burst_rate ?? 0,
     speedDecay: row.speed_decay ?? 0,
     smoothedCombinedZ: row.smoothed_combined_z ?? null,
+    sessionDurationMinutes: row.session_duration_minutes ?? 0,
   };
 }
 

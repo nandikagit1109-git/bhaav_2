@@ -66,7 +66,7 @@ export function sanitizeSession(payload) {
 
     // New features are optional — default to 0 if not provided
     if (!Number.isFinite(value)) {
-      if (key === "longPauseRate" || key === "correctionBurstRate" || key === "speedDecay") {
+      if (key === "longPauseRate" || key === "correctionBurstRate" || key === "speedDecay" || key === "sessionDurationMinutes") {
         session[key] = 0;
         continue;
       }

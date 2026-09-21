@@ -140,7 +140,8 @@ async function runMigrations(pool) {
       long_pause_rate       DOUBLE PRECISION NOT NULL DEFAULT 0,
       correction_burst_rate DOUBLE PRECISION NOT NULL DEFAULT 0,
       speed_decay           DOUBLE PRECISION NOT NULL DEFAULT 0,
-      smoothed_combined_z   DOUBLE PRECISION
+      smoothed_combined_z   DOUBLE PRECISION,
+      session_duration_minutes DOUBLE PRECISION NOT NULL DEFAULT 0
     );
 
     CREATE TABLE IF NOT EXISTS insights (
@@ -208,6 +209,7 @@ export function rowToSession(row) {
     correctionBurstRate: row.correction_burst_rate ?? 0,
     speedDecay: row.speed_decay ?? 0,
     smoothedCombinedZ: row.smoothed_combined_z ?? null,
+    sessionDurationMinutes: row.session_duration_minutes ?? 0,
   };
 }
 

@@ -272,8 +272,9 @@ export async function createApp(database) {
         `INSERT INTO sessions (
           id, user_id, created_at, typing_speed, mean_pause_ms, pause_std_dev_ms,
           correction_rate, timing_variance, session_duration, deviation, dominant_feature, high_deviation,
-          long_pause_rate, correction_burst_rate, speed_decay, smoothed_combined_z
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
+          long_pause_rate, correction_burst_rate, speed_decay, smoothed_combined_z,
+          session_duration_minutes
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`,
         [
           id,
           userId,
@@ -291,6 +292,7 @@ export async function createApp(database) {
           features.correctionBurstRate ?? 0,
           features.speedDecay ?? 0,
           smoothedCombinedZ,
+          features.sessionDurationMinutes ?? 0,
         ],
       );
 

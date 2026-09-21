@@ -124,6 +124,12 @@ export function extractFeatures(raw) {
   // Expressed as a ratio: (firstHalfWPM - secondHalfWPM) / firstHalfWPM
   const speedDecay = computeSpeedDecay(keyDowns);
 
+  // ── Feature 9: Session Duration (minutes) ──────────────────────────────
+  // BiAffect (Vesel et al., JAMIA 2020, n=86541 sessions) found depression
+  // severity associated with SHORTER session duration. We store this as a
+  // scored feature so deviations from baseline can be detected.
+  const sessionDurationMinutes = sessionDurationSec / 60;
+
   return {
     typingSpeed: clamp(typingSpeed, 0, 250),
     meanPauseMs: clamp(meanPauseMs, 0, 20000),
@@ -134,6 +140,7 @@ export function extractFeatures(raw) {
     correctionBurstRate: clamp(correctionBurstRate, 0, 1),
     speedDecay: clamp(speedDecay, -5, 5), // can be negative (speeding up)
     sessionDuration: clamp(sessionDurationSec, 0, 86400),
+    sessionDurationMinutes: clamp(sessionDurationMinutes, 0, 1440),
   };
 }
 
@@ -245,6 +252,7 @@ function fallbackFeatures(raw) {
     correctionBurstRate: Number(raw?.correctionBurstRate) || 0,
     speedDecay: Number(raw?.speedDecay) || 0,
     sessionDuration: Number(raw?.sessionDuration) || 0,
+    sessionDurationMinutes: Number(raw?.sessionDurationMinutes) || (Number(raw?.sessionDuration) || 0) / 60,
   };
 }
 
@@ -262,6 +270,7 @@ export const FEATURE_KEYS = [
   "longPauseRate",
   "correctionBurstRate",
   "speedDecay",
+  "sessionDurationMinutes",
 ];
 
 /**
@@ -279,18 +288,32 @@ export const ORIGINAL_FEATURE_KEYS = [
  * Direction of each feature: "up_concerning", "down_concerning", or "neutral".
  *
  * "up_concerning" = higher values are worse (more pauses, more corrections)
- * "down_concerning" = lower values are worse (slower typing)
+ * "down_concerning" = lower values are worse (slower typing, shorter sessions)
  * "neutral" = magnitude of change matters, not direction
+ *
+ * NOTE on correctionRate: Liu et al. (JMIR 2024, n=128) found that raw backspace
+ * rate alone did NOT significantly differ between healthy and mood-disorder groups.
+ * Only a derived multi-feature pattern was predictive. We keep correctionRate as
+ * a feature but de-emphasize its weight in scoreSession() (0.6x) to reflect that
+ * it is a weaker standalone signal than typing_speed_variance or session_duration.
+ *
+ * NOTE on what we do NOT implement:
+ * - We do NOT claim backspace rate alone indicates mood state (unsupported by
+ *   the raw-rate finding above).
+ * - We do NOT claim keystroke data can predict specific clinical conditions.
+ *   Adolescent studies in this research area found weak/no predictive associations.
+ *   This is exactly why Bhaav stays framed as self-awareness, never diagnostic.
  */
 export const FEATURE_DIRECTION = {
-  typingSpeed: "down_concerning",      // Slower = concerning
-  meanPauseMs: "up_concerning",        // More pausing = concerning
-  pauseStdDevMs: "neutral",            // More variable = different, not worse
-  correctionRate: "up_concerning",     // More corrections = concerning
-  timingVariance: "neutral",           // More variable = different, not worse
-  longPauseRate: "up_concerning",      // More long pauses = concerning (distracted)
-  correctionBurstRate: "up_concerning", // More bursts = concerning (bigger revisions)
-  speedDecay: "up_concerning",         // Slowing down within session = concerning
+  typingSpeed: "down_concerning",        // Slower = concerning (BiAffect)
+  meanPauseMs: "up_concerning",          // More pausing = concerning
+  pauseStdDevMs: "neutral",              // More variable = different, not worse
+  correctionRate: "up_concerning",       // More corrections = concerning (de-emphasized, see above)
+  timingVariance: "neutral",             // More variable = different, not worse
+  longPauseRate: "up_concerning",        // More long pauses = concerning (distracted)
+  correctionBurstRate: "up_concerning",  // More bursts = concerning (bigger revisions)
+  speedDecay: "up_concerning",           // Slowing down within session = concerning
+  sessionDurationMinutes: "down_concerning", // Shorter sessions = concerning (BiAffect 2020)
 };
 
 /**
@@ -307,4 +330,5 @@ export const FEATURE_BOUNDS = {
   longPauseRate: [0, 1],
   correctionBurstRate: [0, 1],
   speedDecay: [-5, 5],
+  sessionDurationMinutes: [0, 1440],
 };
