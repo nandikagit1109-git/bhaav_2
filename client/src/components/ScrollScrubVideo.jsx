@@ -50,17 +50,23 @@ export default function ScrollScrubVideo({
   const [autoPlayMode, setAutoPlayMode] = useState(false);
   const autoPlayRef = useRef(false);
 
+  /* ── Log video src on mount for debugging ──────────────────── */
+  useEffect(() => {
+    console.log('[Bhaav ScrollScrubVideo] Video src:', src, '| Poster:', poster || '(none)');
+  }, [src, poster]);
+
   /* ── Loading timeout ───────────────────────────────────────── */
   useEffect(() => {
     if (phase !== 'loading') return;
     const timer = setTimeout(() => {
       if (phase === 'loading') {
+        console.warn('[Bhaav ScrollScrubVideo] Metadata load timed out after 5s — src:', src);
         setPhase('error');
         setErrorMessage('Video is taking a while to load. Try the play button or scroll down.');
       }
     }, LOAD_TIMEOUT_MS);
     return () => clearTimeout(timer);
-  }, [phase]);
+  }, [phase, src]);
 
   /* ── Scroll tracking ───────────────────────────────────────── */
   const { scrollYProgress } = useScroll({
