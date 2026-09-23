@@ -12,7 +12,8 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 CREATE TABLE IF NOT EXISTS users (
   id                    TEXT PRIMARY KEY,          -- app-generated IDs remain TEXT
   created_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  campus_pulse_opt_in   INTEGER NOT NULL DEFAULT 0
+  campus_pulse_opt_in   INTEGER NOT NULL DEFAULT 0,
+  recovery_code         TEXT UNIQUE
 );
 
 -- ── Settings (one row per user) ───────────────────────────────────
@@ -38,7 +39,12 @@ CREATE TABLE IF NOT EXISTS sessions (
   session_duration      DOUBLE PRECISION NOT NULL,
   deviation             DOUBLE PRECISION,
   dominant_feature      TEXT,
-  high_deviation        INTEGER NOT NULL DEFAULT 0
+  high_deviation        INTEGER NOT NULL DEFAULT 0,
+  long_pause_rate       DOUBLE PRECISION NOT NULL DEFAULT 0,
+  correction_burst_rate DOUBLE PRECISION NOT NULL DEFAULT 0,
+  speed_decay           DOUBLE PRECISION NOT NULL DEFAULT 0,
+  smoothed_combined_z   DOUBLE PRECISION,
+  session_duration_minutes DOUBLE PRECISION NOT NULL DEFAULT 0
 );
 
 -- ── Insights (one per user per week) ──────────────────────────────
@@ -60,6 +66,16 @@ CREATE TABLE IF NOT EXISTS feedback (
   response              TEXT NOT NULL,
   created_at            TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- ── Backfills for databases created before these columns existed ──
+-- (CREATE TABLE IF NOT EXISTS above won't add columns to old tables)
+ALTER TABLE users ADD COLUMN IF NOT EXISTS campus_pulse_opt_in INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS recovery_code TEXT UNIQUE;
+ALTER TABLE sessions ADD COLUMN IF NOT EXISTS long_pause_rate DOUBLE PRECISION NOT NULL DEFAULT 0;
+ALTER TABLE sessions ADD COLUMN IF NOT EXISTS correction_burst_rate DOUBLE PRECISION NOT NULL DEFAULT 0;
+ALTER TABLE sessions ADD COLUMN IF NOT EXISTS speed_decay DOUBLE PRECISION NOT NULL DEFAULT 0;
+ALTER TABLE sessions ADD COLUMN IF NOT EXISTS smoothed_combined_z DOUBLE PRECISION;
+ALTER TABLE sessions ADD COLUMN IF NOT EXISTS session_duration_minutes DOUBLE PRECISION NOT NULL DEFAULT 0;
 
 -- ═══════════════════════════════════════════════════════════════════
 -- INDEXES — hit on every request path

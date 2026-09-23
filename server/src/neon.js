@@ -97,10 +97,6 @@ async function runMigrations(sql) {
       id                    TEXT PRIMARY KEY,
       created_at            TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       campus_pulse_opt_in   INTEGER NOT NULL DEFAULT 0,
-      email                 TEXT UNIQUE,
-      password_hash         TEXT,
-      display_name          TEXT NOT NULL DEFAULT '',
-      email_verified        INTEGER NOT NULL DEFAULT 0,
       recovery_code         TEXT UNIQUE
     );
 

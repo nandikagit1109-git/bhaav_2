@@ -19,10 +19,6 @@ CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY,
   created_at TEXT NOT NULL,
   campus_pulse_opt_in INTEGER DEFAULT 0,
-  email TEXT UNIQUE,
-  password_hash TEXT,
-  display_name TEXT NOT NULL DEFAULT '',
-  email_verified INTEGER NOT NULL DEFAULT 0,
   recovery_code TEXT UNIQUE
 );
 CREATE TABLE IF NOT EXISTS settings (
@@ -68,14 +64,6 @@ CREATE TABLE IF NOT EXISTS feedback (
   response TEXT NOT NULL,
   created_at TEXT NOT NULL
 );
-CREATE TABLE IF NOT EXISTS password_resets (
-  id TEXT PRIMARY KEY,
-  user_id TEXT NOT NULL,
-  token_hash TEXT NOT NULL,
-  expires_at TEXT NOT NULL,
-  used INTEGER NOT NULL DEFAULT 0,
-  created_at TEXT NOT NULL
-);
 `;
 
 export async function createDatabase(filePath) {
@@ -97,19 +85,6 @@ export async function createDatabase(filePath) {
     db.run("ALTER TABLE users ADD COLUMN campus_pulse_opt_in INTEGER DEFAULT 0");
   } catch (_) { /* column already exists */ }
 
-  // Migration: add auth columns
-  try {
-    db.run("ALTER TABLE users ADD COLUMN email TEXT");
-  } catch (_) { /* column already exists */ }
-  try {
-    db.run("ALTER TABLE users ADD COLUMN password_hash TEXT");
-  } catch (_) { /* column already exists */ }
-  try {
-    db.run("ALTER TABLE users ADD COLUMN display_name TEXT NOT NULL DEFAULT ''");
-  } catch (_) { /* column already exists */ }
-  try {
-    db.run("ALTER TABLE users ADD COLUMN email_verified INTEGER NOT NULL DEFAULT 0");
-  } catch (_) { /* column already exists */ }
   // Migration: add recovery_code column
   try {
     db.run("ALTER TABLE users ADD COLUMN recovery_code TEXT");

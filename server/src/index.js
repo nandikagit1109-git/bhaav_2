@@ -21,7 +21,6 @@ import {
   recoveryRateLimit,
 } from "./middleware/rateLimit.js";
 import { generateUniqueRecoveryCode } from "./recovery.js";
-import { requireAuth } from "./middleware/auth.js";
 
 dotenv.config({ path: path.join(path.dirname(fileURLToPath(import.meta.url)), "../../.env") });
 
@@ -30,14 +29,14 @@ const PORT = Number(process.env.PORT || 8787);
 const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || "http://localhost:5173";
 
 function userIdFrom(req) {
-  // requireAuth middleware already extracted userId from x-bhaav-user or JWT
+  // userIdFrom reads the anonymous x-bhaav-user header (localStorage user_id)
   if (req.userId && req.userId !== "demo") return req.userId;
   // Fallback for backward compatibility (demo mode)
   return assertUserId(req.header("x-bhaav-user") || "demo");
 }
 
 async function ensureUser(db, userId) {
-  const existing = await db.get("SELECT id FROM users WHERE id = $1", [userId]);
+  const existing = await db.get("SELECT id, recovery_code FROM users WHERE id = $1", [userId]);
   let isNew = false;
   if (!existing) {
     // Auto-generate a recovery code so the user can recover data later
@@ -189,7 +188,7 @@ export async function createApp(database) {
   });
 
   // ── State: sessions + baseline + insight + settings ───────────
-  app.get("/api/state", requireAuth, async (req, res) => {
+  app.get("/api/state", async (req, res) => {
     try {
       const userId = userIdFrom(req);
       const isNew = await ensureUser(database, userId);
@@ -242,8 +241,8 @@ export async function createApp(database) {
     }
   });
 
-  // ── Session recording (rate-limited, auth required) ───────────
-  app.post("/api/sessions", requireAuth, sessionRateLimit, async (req, res) => {
+  // ── Session recording (rate-limited, anonymous user) ───────────
+  app.post("/api/sessions", sessionRateLimit, async (req, res) => {
     try {
       const userId = userIdFrom(req);
       await ensureUser(database, userId);
@@ -308,8 +307,8 @@ export async function createApp(database) {
     }
   });
 
-  // ── Weekly insight (rate-limited, auth required) ───────────────
-  app.post("/api/insights/weekly", requireAuth, insightRateLimit, async (req, res) => {
+  // ── Weekly insight (rate-limited, anonymous user) ───────────────
+  app.post("/api/insights/weekly", insightRateLimit, async (req, res) => {
     try {
       const userId = userIdFrom(req);
       await ensureUser(database, userId);
@@ -415,8 +414,8 @@ export async function createApp(database) {
     }
   });
 
-  // ── Feedback (rate-limited, auth required) ────────────────────
-  app.post("/api/feedback", requireAuth, feedbackRateLimit, async (req, res) => {
+  // ── Feedback (rate-limited, anonymous user) ────────────────────
+  app.post("/api/feedback", feedbackRateLimit, async (req, res) => {
     try {
       const userId = userIdFrom(req);
       const allowed = ["a_little", "not_really", "not_sure"];
@@ -449,8 +448,8 @@ export async function createApp(database) {
     }
   });
 
-  // ── Get my recovery code (auth required) ──────────────────────
-  app.get("/api/me/recovery-code", requireAuth, async (req, res) => {
+  // ── Get my recovery code (anonymous user) ──────────────────────
+  app.get("/api/me/recovery-code", async (req, res) => {
     try {
       const userId = userIdFrom(req);
       const user = await database.get(
@@ -464,8 +463,8 @@ export async function createApp(database) {
     }
   });
 
-  // ── Settings (auth required) ──────────────────────────────────
-  app.put("/api/settings", requireAuth, generalWriteRateLimit, async (req, res) => {
+  // ── Settings (anonymous user) ──────────────────────────────────
+  app.put("/api/settings", generalWriteRateLimit, async (req, res) => {
     try {
       const userId = userIdFrom(req);
       await ensureUser(database, userId);
@@ -486,8 +485,8 @@ export async function createApp(database) {
     }
   });
 
-  // ── Campus Pulse (aggregate, auth required) ──────────────────
-  app.get("/api/campus", requireAuth, async (req, res) => {
+  // ── Campus Pulse (aggregate, anonymous user) ──────────────────
+  app.get("/api/campus", async (req, res) => {
     try {
       userIdFrom(req);
       const rows = (
@@ -515,8 +514,8 @@ export async function createApp(database) {
     }
   });
 
-  // ── Data export (auth required) ───────────────────────────────
-  app.get("/api/export", requireAuth, async (req, res) => {
+  // ── Data export (anonymous user) ───────────────────────────────
+  app.get("/api/export", async (req, res) => {
     try {
       const userId = userIdFrom(req);
       const sessions = await sessionsFor(database, userId);
@@ -554,8 +553,8 @@ export async function createApp(database) {
     }
   });
 
-  // ── Delete all user data (auth required) ──────────────────────
-  app.delete("/api/me", requireAuth, generalWriteRateLimit, async (req, res) => {
+  // ── Delete all user data (anonymous user) ──────────────────────
+  app.delete("/api/me", generalWriteRateLimit, async (req, res) => {
     try {
       const userId = userIdFrom(req);
       await database.run("DELETE FROM feedback WHERE user_id = $1", [userId]);
@@ -570,8 +569,8 @@ export async function createApp(database) {
     }
   });
 
-  // ── Demo seed (auth required) ─────────────────────────────────
-  app.post("/api/demo/seed", requireAuth, generalWriteRateLimit, async (req, res) => {
+  // ── Demo seed (anonymous user) ─────────────────────────────────
+  app.post("/api/demo/seed", generalWriteRateLimit, async (req, res) => {
     try {
       userIdFrom(req);
       await invalidateAllBaselines();
@@ -600,8 +599,8 @@ export async function createApp(database) {
     res.status(500).json({ error: "Unexpected error" });
   });
 
-  // ── Campus Pulse: per-user opt-in (auth required) ─────────────
-  app.post("/api/settings/campus-pulse-opt-in", requireAuth, generalWriteRateLimit, async (req, res) => {
+  // ── Campus Pulse: per-user opt-in (anonymous user) ─────────────
+  app.post("/api/settings/campus-pulse-opt-in", generalWriteRateLimit, async (req, res) => {
     try {
       const userId = userIdFrom(req);
       await ensureUser(database, userId);
@@ -613,8 +612,8 @@ export async function createApp(database) {
     }
   });
 
-  // ── Campus Pulse: anonymous peer-count (auth required) ────────
-  app.get("/api/campus-pulse/peer-count/:userId", requireAuth, async (req, res) => {
+  // ── Campus Pulse: anonymous peer-count (anonymous user) ────────
+  app.get("/api/campus-pulse/peer-count/:userId", async (req, res) => {
     try {
       const requestingUserId = assertUserId(req.params.userId);
 

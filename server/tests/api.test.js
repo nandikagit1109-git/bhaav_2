@@ -37,26 +37,20 @@ async function listen(app) {
   });
 }
 
-// Sign up a test user and return a JWT token
-async function getAuthToken(url) {
-  const res = await fetch(`${url}/api/auth/signup`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ email: "test@bhaav.dev", password: "Test1234!" }),
-  });
-  const body = await res.json();
-  return body.token;
-}
+// Bhaav has no login — tests identify as the seeded demo user via the
+// anonymous x-bhaav-user header (exactly what the client sends).
+const DEMO_HEADERS = {
+  "x-bhaav-user": "demo",
+  "content-type": "application/json",
+};
 
 async function withServer(fn) {
   const database = await createTestDatabase();
   await seedDatabase(database);
   const app = await createApp(database);
   const { server, url } = await listen(app);
-  const token = await getAuthToken(url);
-  const authHeaders = { "authorization": `Bearer ${token}`, "content-type": "application/json" };
   try {
-    await fn(url, database, token, authHeaders);
+    await fn(url, database, null, DEMO_HEADERS);
   } finally {
     await new Promise((resolve) => server.close(resolve));
     await closeTestDatabase(database);
@@ -69,7 +63,8 @@ test("seeded dashboard is not empty", async () => {
     const body = await res.json();
     assert.equal(res.status, 200);
     assert.ok(Array.isArray(body.sessions));
-    assert.equal(body.baseline.ready, false);
+    assert.ok(body.sessions.length >= 10);
+    assert.equal(body.baseline.ready, true);
     assert.doesNotMatch(JSON.stringify(body), /Today felt like/);
   });
 });

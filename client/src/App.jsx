@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
-import { AuthProvider } from './contexts/AuthContext';
 import Navbar from './components/Navbar';
 import CustomCursor from './components/CustomCursor';
 import HomePage from './pages/HomePage';
@@ -20,11 +19,7 @@ import { fetchState } from './api/client';
 import { EASE } from './motion/primitives';
 
 export default function App() {
-  return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
-  );
+  return <AppContent />;
 }
 
 function AppContent() {
