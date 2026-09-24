@@ -680,11 +680,13 @@ export async function createApp(database) {
 const isMain = process.argv[1] && path.normalize(process.argv[1]) === fileURLToPath(import.meta.url);
 
 if (isMain) {
-  // Use Neon serverless if DATABASE_URL is set, otherwise fall back to SQLite
+  // Use PostgreSQL (pg pool adapter) if DATABASE_URL is set, else SQLite.
+  // pg.js speaks plain TCP — works with Railway Postgres, Neon, or any PG.
+  // neon.js is HTTP-only and cannot talk to a standard Postgres instance.
   let database;
   if (process.env.DATABASE_URL) {
-    const neonDb = await import("./neon.js");
-    database = await neonDb.createDatabase();
+    const pgDb = await import("./pg.js");
+    database = await pgDb.createDatabase();
   } else {
     database = await createSqliteDatabase(
       path.join(path.dirname(fileURLToPath(import.meta.url)), "../data/bhaav.sqlite")
