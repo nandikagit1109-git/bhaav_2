@@ -28,8 +28,21 @@ export function getPool() {
   const connectionString = process.env.DATABASE_URL;
   const poolSize = Number(process.env.POOL_SIZE || 30);
 
+  // Managed Postgres (Railway `postgres-ssl` template, Neon, etc.) requires
+  // TLS. Local dev servers don't, so only enable it for non-local hosts —
+  // and never fail the handshake on a missing custom CA.
+  let ssl;
+  try {
+    const host = new URL(connectionString).hostname;
+    const isLocal = host === "localhost" || host === "127.0.0.1" || host === "::1";
+    if (!isLocal) ssl = { rejectUnauthorized: false };
+  } catch {
+    // unparseable connection string — let pg handle it and surface its error
+  }
+
   _pool = new Pool({
     connectionString,
+    ssl,
     max: poolSize,
     idleTimeoutMillis: 30_000,
     connectionTimeoutMillis: 10_000,
