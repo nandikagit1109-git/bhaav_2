@@ -95,9 +95,11 @@ async function getBaselineCached(db, userId, sessions) {
   const cached = await getCachedBaseline(userId);
   if (cached) return cached;
 
-  // Compute from sessions
-  const prior = sessions.slice(0, -1);
-  const baseline = buildBaseline(prior.length ? prior : sessions.slice(0, 0));
+  // Compute from ALL stored sessions (including the latest). The old
+  // slice(0, -1) dropped one session, so a user with exactly
+  // MIN_BASELINE_SESSIONS sessions was still "not ready" and got the
+  // "still learning" fallback.
+  const baseline = buildBaseline(sessions);
 
   // Store in cache (fire-and-forget)
   setCachedBaseline(userId, baseline);
@@ -248,14 +250,18 @@ export async function createApp(database) {
       await ensureUser(database, userId);
       const features = sanitizeSession(req.body);
       const historical = await sessionsFor(database, userId);
-      const baseline = buildBaseline(historical);
+
+      // Include THIS session in the baseline so a user's MIN-th session
+      // (the 5th) is scored as "evaluated" instead of "still learning".
+      // median/MAD stays robust to the single self-inclusion.
+      const allSessions = [...historical, features];
+      const baseline = buildBaseline(allSessions);
 
       // Score this single session (for storage and recent-sessions table)
       const score = scoreSession(features, baseline);
 
       // Multi-session smoothing: average of last 3 sessions (including this one)
       // Used for weekly insights and intervention triggers
-      const allSessions = [...historical, features];
       const smoothedScore = scoreSmoothed(allSessions, baseline);
       const smoothedDeviation = smoothedScore.deviation;
       const smoothedCombinedZ = smoothedScore._rawCombinedZ ?? null;
@@ -519,7 +525,7 @@ export async function createApp(database) {
     try {
       const userId = userIdFrom(req);
       const sessions = await sessionsFor(database, userId);
-      const baseline = buildBaseline(sessions.slice(0, -1));
+      const baseline = buildBaseline(sessions);
       const insights = await database.all(
         "SELECT * FROM insights WHERE user_id = $1 ORDER BY created_at ASC",
         [userId],

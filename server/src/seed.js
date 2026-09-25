@@ -188,7 +188,7 @@ export async function seedDatabase(database) {
     [insightId, DEMO_USER, week, copy.observation, copy.suggestion, copy.source, daysAgo(0, 8)],
   );
 
-  // Each campus user needs >= MIN_BASELINE_SESSIONS (6) sessions to have non-null deviation
+  // Each campus user needs >= MIN_BASELINE_SESSIONS (5) sessions to have non-null deviation
   for (let i = 1; i <= 16; i += 1) {
     const id = `campus-${String(i).padStart(2, "0")}`;
     await ensureUser(database, id, "awareness");

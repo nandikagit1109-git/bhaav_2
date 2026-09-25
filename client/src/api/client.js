@@ -92,7 +92,7 @@ export async function fetchBaseline() {
       std_speed: b.features?.typingSpeed?.stdDev,
       std_pause: b.features?.meanPauseMs?.stdDev,
       sessionCount: b.sessionCount ?? 0,
-      minRequired: b.minRequired ?? 6,
+      minRequired: b.minRequired ?? 5,
     }
   };
 }
@@ -155,9 +155,9 @@ export async function submitSessionTelemetry(telemetry) {
       zVariance: data.zScores?.timingVariance ?? 0,
       highDeviation: data.highDeviation,
       status: data.baseline?.ready ? 'evaluated' : 'learning',
-      // sessionCount = baseline size (sessions BEFORE this one)
-      sessionsRecorded: (data.baseline?.sessionCount ?? 0) + 1,
-      sessionsRequired: data.baseline?.minRequired ?? 6,
+      // sessionCount = all sessions recorded, including this one
+      sessionsRecorded: data.baseline?.sessionCount ?? 1,
+      sessionsRequired: data.baseline?.minRequired ?? 5,
     },
     baseline: data.baseline,
   };

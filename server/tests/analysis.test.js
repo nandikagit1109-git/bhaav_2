@@ -312,7 +312,7 @@ test("scoreSession returns not ready when baseline not ready", () => {
 });
 
 test("scoreSession dampens deviation for low session count", () => {
-  const sessions = Array.from({ length: 6 }, (_, i) => ({
+  const sessions = Array.from({ length: 5 }, (_, i) => ({
     typingSpeed: 40,
     meanPauseMs: 400,
     pauseStdDevMs: 150,
@@ -338,9 +338,9 @@ test("scoreSession dampens deviation for low session count", () => {
 
   const result = scoreSession(session, baseline);
 
-  // Confidence should be low (only 6 sessions, just barely ready)
-  // confidence = min(1, (6 - 6) / 10) = 0
-  assert.ok(result._confidence < 0.1, "Confidence should be low with only 6 sessions");
+  // Confidence should be low (only 5 sessions, just barely ready)
+  // confidence = min(1, (5 - 5) / 10) = 0
+  assert.ok(result._confidence < 0.1, "Confidence should be low with only 5 sessions");
 
   // Deviation should be dampened
   assert.ok(result.deviation >= 0);
@@ -373,7 +373,7 @@ test("scoreSession full confidence with many sessions", () => {
 
   const result = scoreSession(session, baseline);
 
-  // confidence = min(1, (20 - 6) / 10) = 1.4 -> clamped to 1
+  // confidence = min(1, (20 - 5) / 10) = 1.5 -> clamped to 1
   assert.equal(result._confidence, 1);
 
   // Similar session should have low deviation

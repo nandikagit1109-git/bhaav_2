@@ -23,7 +23,7 @@ import { FEATURE_KEYS, FEATURE_DIRECTION } from "./featureExtraction.js";
  * Minimum sessions before a baseline is considered "ready."
  * Before this point, we can't compute reliable statistics.
  */
-export const MIN_BASELINE_SESSIONS = Number(process.env.MIN_BASELINE_SESSIONS || 6);
+export const MIN_BASELINE_SESSIONS = Number(process.env.MIN_BASELINE_SESSIONS || 5);
 
 /**
  * Small epsilon to avoid division by zero when MAD is 0.

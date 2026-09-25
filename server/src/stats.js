@@ -6,7 +6,7 @@ export const FEATURE_KEYS = [
   "timingVariance",
 ];
 
-export const MIN_BASELINE_SESSIONS = Number(process.env.MIN_BASELINE_SESSIONS || 6);
+export const MIN_BASELINE_SESSIONS = Number(process.env.MIN_BASELINE_SESSIONS || 5);
 export const ZERO_VARIANCE_EPS = 1e-6;
 export const HIGH_DEVIATION = 1.65;
 
