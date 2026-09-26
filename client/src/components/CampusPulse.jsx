@@ -99,7 +99,7 @@ export default function CampusPulse({ forcedCohort }) {
       <div>
         <div className="flex flex-col sm:flex-row sm:items-baseline justify-between gap-4">
           <div>
-            <span className="eyebrow text-accent-terracotta">Campus pulse</span>
+            <span className="eyebrow text-accent-teal">Campus pulse</span>
             <h3 className="font-serif text-2xl sm:text-3xl text-ink-950 mt-3">
               {isElevated ? 'Campus rhythm is shifting.' : 'Campus rhythm holds steady.'}
             </h3>
@@ -112,7 +112,7 @@ export default function CampusPulse({ forcedCohort }) {
 
         {/* Trend statement */}
         <div className="mt-8 flex items-start gap-4">
-          {isElevated && <TrendingUp className="w-4 h-4 text-accent-terracotta mt-2 flex-shrink-0" aria-hidden="true" />}
+          {isElevated && <TrendingUp className="w-4 h-4 text-accent-teal mt-2 flex-shrink-0" aria-hidden="true" />}
           <p className="font-serif italic text-lg sm:text-xl text-ink-800 leading-relaxed max-w-2xl">
             &ldquo;{pulseData?.trendDescription}&rdquo;
           </p>
@@ -121,7 +121,7 @@ export default function CampusPulse({ forcedCohort }) {
         {/* Week-over-week comparison — the honest aggregate */}
         {Array.isArray(pulseData?.weeks) && pulseData.weeks.length > 0 && (
           <div className="mt-10">
-            <div className="eyebrow">Week over week</div>
+            <div className="eyebrow text-accent-teal">Week over week</div>
             <div className="mt-4 space-y-4 max-w-xl">
               {pulseData.weeks.map((w) => {
                 const maxDev = Math.max(...pulseData.weeks.map(x => x.meanDeviation), 1);
@@ -141,7 +141,14 @@ export default function CampusPulse({ forcedCohort }) {
                         className="h-full rounded-full transition-all duration-700"
                         style={{
                           width: `${(w.meanDeviation / maxDev) * 100}%`,
-                          backgroundColor: w.meanDeviation >= 10 ? '#B45A3C' : w.meanDeviation >= 5 ? '#A8842C' : '#5A7A62',
+                          // Teal = "the anonymous group signal". It distinguishes the
+                          // campus-wide aggregate from BOTH the individual line and the
+                          // rust alert color, so a rising aggregate trend never visually
+                          // reads as an alarm — institutional/informational, not a
+                          // warning state. Scoped to this aggregate viz + its directly
+                          // related labels ONLY (Journal, Dashboard stat cards, nav and
+                          // Privacy stay on the existing palette).
+                          backgroundColor: 'var(--accent-teal)',
                         }}
                       />
                     </div>

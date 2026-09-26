@@ -45,6 +45,7 @@
   --color-accent-roseLight: #FFF1F2;
   --color-accent-sky: #0EA5E9;
   --color-accent-skyLight: #F0F9FF;
+  --color-accent-teal: #3A6B63;
 
   --font-serif: 'Newsreader', Georgia, serif;
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -52,6 +53,19 @@
 
   --shadow-paper-sm: 0 1px 2px 0 rgba(20, 18, 14, 0.04);
   --shadow-paper-md: 0 6px 24px -8px rgba(20, 18, 14, 0.08), 0 1px 3px 0 rgba(20, 18, 14, 0.03);
+}
+
+/* ——— Campus Pulse aggregate accent ——— */
+:root {
+  /* Teal marks "the anonymous group signal": it distinguishes the
+     campus-wide aggregate from BOTH the individual line (indigo/ink) and
+     the rust alert color (#B5533C family), so a rising aggregate trend
+     never visually reads as an alarm — it is institutional/informational,
+     not a warning state.
+     Scoped to the Campus Pulse aggregate trend viz + its directly related
+     legend/label elements ONLY: Journal, Dashboard stat cards, nav and
+     Privacy keep the existing neutral palette. */
+  --accent-teal: #3A6B63;
 }
 
 @layer base {
