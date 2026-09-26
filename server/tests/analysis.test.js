@@ -380,6 +380,72 @@ test("scoreSession full confidence with many sessions", () => {
   assert.ok(result.deviation < 0.5, "Similar session should have low deviation");
 });
 
+test("scoreSession reports raw signal and confidence separately — a real shift never collapses to 0", () => {
+  // 5 sessions: baseline just became ready, confidence is exactly 0.
+  const sessions = Array.from({ length: 5 }, (_, i) => ({
+    typingSpeed: 55 + (i % 3) * 5,
+    meanPauseMs: 280 + (i % 3) * 20,
+    pauseStdDevMs: 90 + (i % 3) * 10,
+    correctionRate: 0.02 + (i % 3) * 0.005,
+    timingVariance: 0.07 + (i % 3) * 0.01,
+    longPauseRate: 0.04 + (i % 3) * 0.01,
+    correctionBurstRate: 0.01 + (i % 3) * 0.002,
+    speedDecay: 0.02 + (i % 3) * 0.005,
+  }));
+  const baseline = buildBaseline(sessions);
+  assert.equal(baseline.ready, true);
+
+  // A dramatically shifted session (slower, more pauses, more revisions).
+  const shifted = {
+    typingSpeed: 10,
+    meanPauseMs: 1200,
+    pauseStdDevMs: 400,
+    correctionRate: 0.4,
+    timingVariance: 0.5,
+    longPauseRate: 0.5,
+    correctionBurstRate: 0.3,
+    speedDecay: 0.4,
+  };
+  const result = scoreSession(shifted, baseline);
+
+  assert.equal(result.ready, true);
+  assert.equal(result.confidence, 0, "confidence is 0 right at the minimum session count");
+  assert.equal(result.sessions_until_full_confidence, 10);
+  assert.ok(result.raw_combined_z > 1, "the raw (undamped) signal must survive — never collapse to 0");
+  assert.equal(result.deviation, 0, "dampened deviation collapses to 0 at confidence 0 (by design)");
+});
+
+test("scoreSession reaches full confidence and scores the raw signal undampened", () => {
+  const sessions = Array.from({ length: 15 }, (_, i) => ({
+    typingSpeed: 55 + (i % 3) * 5,
+    meanPauseMs: 280 + (i % 3) * 20,
+    pauseStdDevMs: 90 + (i % 3) * 10,
+    correctionRate: 0.02 + (i % 3) * 0.005,
+    timingVariance: 0.07 + (i % 3) * 0.01,
+    longPauseRate: 0.04 + (i % 3) * 0.01,
+    correctionBurstRate: 0.01 + (i % 3) * 0.002,
+    speedDecay: 0.02 + (i % 3) * 0.005,
+  }));
+  const baseline = buildBaseline(sessions);
+
+  const shifted = {
+    typingSpeed: 10,
+    meanPauseMs: 1200,
+    pauseStdDevMs: 400,
+    correctionRate: 0.4,
+    timingVariance: 0.5,
+    longPauseRate: 0.5,
+    correctionBurstRate: 0.3,
+    speedDecay: 0.4,
+  };
+  const result = scoreSession(shifted, baseline);
+
+  assert.equal(result.confidence, 1);
+  assert.equal(result.sessions_until_full_confidence, 0);
+  assert.ok(result.raw_combined_z > 1);
+  assert.ok(result.deviation > 0, "at full confidence the dampened score reflects the raw signal");
+});
+
 test("directional scoring: faster session does not flag as concerning", () => {
   const sessions = Array.from({ length: 15 }, () => ({
     typingSpeed: 40,

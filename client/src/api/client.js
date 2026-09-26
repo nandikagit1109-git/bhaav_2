@@ -62,20 +62,35 @@ export async function fetchState() {
 // ── Sessions ────────────────────────────────────────
 export async function fetchSessions() {
   const state = await fetchState();
-  // BHAAV2 returns camelCase (createdAt, typingSpeed, deviation, etc.)
-  // Map to the names the dashboard components expect
-  const sessions = (state.sessions || []).map(s => ({
-    id: s.id,
-    created_at: s.createdAt,
-    typing_speed: s.typingSpeed,
-    mean_pause_ms: s.meanPauseMs,
-    correction_rate: s.correctionRate,
-    timing_variance: s.timingVariance,
-    // Server deviation is σ-units (RMS z); presented on the 0–100 scale.
-    deviation_score: s.deviation != null ? sigmaToScore(s.deviation) : 0,
-    session_duration: s.sessionDuration,
-  }));
-  return { sessions };
+  const minRequired = state.baseline?.minRequired ?? 5;
+  // Per-session confidence mirrors the server ramp: 0 until minRequired
+  // sessions, then 1 after 10 more. Below 0.3 the stored deviation is
+  // heavily dampened — flag those sessions so the UI can say
+  // "Building confidence" instead of a misleading "0 / 100".
+  const sessions = (state.sessions || []).map((s, idx) => {
+    const confidence = Math.max(0, Math.min(1, ((idx + 1) - minRequired) / 10));
+    return {
+      id: s.id,
+      created_at: s.createdAt,
+      typing_speed: s.typingSpeed,
+      mean_pause_ms: s.meanPauseMs,
+      correction_rate: s.correctionRate,
+      timing_variance: s.timingVariance,
+      // Server deviation is σ-units (RMS z); presented on the 0–100 scale.
+      deviation_score: s.deviation != null ? sigmaToScore(s.deviation) : 0,
+      confidence,
+      building: confidence < 0.3,
+      session_duration: s.sessionDuration,
+    };
+  });
+  return {
+    sessions,
+    // Raw signal + confidence from /api/state, kept separate from the
+    // dampened deviation (confidence < 0.3 ⇒ not measured confidently yet).
+    rawCombinedZ: state.raw_combined_z ?? null,
+    confidence: state.confidence ?? null,
+    sessionsUntilFullConfidence: state.sessions_until_full_confidence ?? null,
+  };
 }
 
 export async function fetchBaseline() {
@@ -84,13 +99,15 @@ export async function fetchBaseline() {
   if (!b || !b.ready) {
     return { baseline: null };
   }
-  // Server returns features like { typingSpeed: { mean, stdDev }, meanPauseMs: { mean, stdDev } }
+  // Server returns robust stats per feature: { median, mad, n }
+  // (mapping `.mean` here used to render "NaN wpm" on the dashboard).
+  const toSigma = (v) => (Number.isFinite(v) ? Math.round(v * 1.4826 * 10) / 10 : undefined);
   return {
     baseline: {
-      mean_speed: b.features?.typingSpeed?.mean,
-      mean_pause: b.features?.meanPauseMs?.mean,
-      std_speed: b.features?.typingSpeed?.stdDev,
-      std_pause: b.features?.meanPauseMs?.stdDev,
+      mean_speed: b.features?.typingSpeed?.median,
+      mean_pause: b.features?.meanPauseMs?.median,
+      std_speed: toSigma(b.features?.typingSpeed?.mad),
+      std_pause: toSigma(b.features?.meanPauseMs?.mad),
       sessionCount: b.sessionCount ?? 0,
       minRequired: b.minRequired ?? 5,
     }
@@ -148,6 +165,12 @@ export async function submitSessionTelemetry(telemetry) {
       // Server deviation is σ-units; present as 0–100 "distance from your rhythm".
       deviationScore: sigmaToScore(data.deviation ?? 0),
       deviationSigma: data.deviation ?? 0,
+      // Raw (undamped) signal + confidence, reported separately so a
+      // low-confidence score is never mistaken for "measured, found normal".
+      rawCombinedZ: data.raw_combined_z ?? null,
+      confidence: data.confidence ?? null,
+      sessionsUntilFullConfidence: data.sessions_until_full_confidence ?? null,
+      building: typeof data.confidence === 'number' && data.confidence < 0.3,
       dominantFeature: data.dominantFeature,
       zSpeed: data.zScores?.typingSpeed ?? 0,
       zPause: data.zScores?.meanPauseMs ?? 0,

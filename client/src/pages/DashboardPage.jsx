@@ -25,6 +25,18 @@ function headlineFor(latest, sessionCount) {
       note: `A few more sessions (${sessionCount} of 5) and Bhaav will know your usual rhythm well enough to notice when it changes.`,
     };
   }
+  // Confidence < 0.3 ⇒ the stored deviation is dampened toward 0.
+  // Presenting that as a number would imply "measured and found normal"
+  // when it actually means "not measured with confidence yet".
+  const confidence = latest?.confidence;
+  if (typeof confidence === 'number' && confidence < 0.3) {
+    return {
+      eyebrow: 'Building',
+      h: ['Still learning', 'your rhythm.'],
+      pop: true,
+      note: 'Enough sessions are recorded to start comparing — but not yet enough to measure distance from your usual pattern with confidence.',
+    };
+  }
   const d = Number(latest?.deviation_score ?? 0);
   if (d >= 60) {
     return {
@@ -165,8 +177,18 @@ export default function DashboardPage({ onNavigateToJournal, onOpenPrivacyModal 
             <div className="gradient-card-coral glow-coral rounded-xl p-5">
               <span className="eyebrow text-accent-coral">Latest deviation</span>
               <div className={`font-serif text-3xl mt-2 ${latestSession ? devBadge(latestSession.deviation_score).text : 'text-ink-400'}`}>
-                {latestSession ? `${Math.round(latestSession.deviation_score)}` : '—'}
-                <span className="text-lg text-ink-400 ml-1">/ 100</span>
+                {!latestSession ? (
+                  '—'
+                ) : latestSession.building ? (
+                  // Confidence < 0.3: the score would read as a dampened 0,
+                  // which looks like "no deviation" — say what's actually true.
+                  <span className="font-serif text-lg text-ink-500">Building confidence</span>
+                ) : (
+                  <>
+                    {Math.round(latestSession.deviation_score)}
+                    <span className="text-lg text-ink-400 ml-1">/ 100</span>
+                  </>
+                )}
               </div>
             </div>
             <div className="gradient-card-indigo glow-indigo rounded-xl p-5">
@@ -176,7 +198,9 @@ export default function DashboardPage({ onNavigateToJournal, onOpenPrivacyModal 
             <div className="gradient-card-sage glow-sage rounded-xl p-5">
               <span className="eyebrow text-accent-sage">Your baseline</span>
               <div className="font-serif text-lg mt-2 text-ink-800">
-                {baseline ? `${Math.round(baseline.mean_speed)} wpm · ${Math.round(baseline.mean_pause)}ms` : 'forming'}
+                {baseline && Number.isFinite(baseline.mean_speed) && Number.isFinite(baseline.mean_pause)
+                  ? `${Math.round(baseline.mean_speed)} wpm · ${Math.round(baseline.mean_pause)}ms`
+                  : 'forming'}
               </div>
             </div>
           </div>
@@ -244,6 +268,7 @@ export default function DashboardPage({ onNavigateToJournal, onOpenPrivacyModal 
                 </div>
                 {sessions.slice(-8).reverse().map((s, idx) => {
                   const badge = devBadge(s.deviation_score);
+                  const building = Boolean(s.building);
                   return (
                     <div
                       key={s.id || idx}
@@ -258,9 +283,9 @@ export default function DashboardPage({ onNavigateToJournal, onOpenPrivacyModal 
                       <span>{Math.round(s.typing_speed)} wpm</span>
                       <span>{Math.round(s.mean_pause_ms)}ms</span>
                       <span>{(s.correction_rate * 100).toFixed(1)}%</span>
-                      <span className={`sm:text-right ${badge.text}`}>
-                        {Math.round(s.deviation_score)}
-                        <span className="hidden sm:inline"> / 100</span>
+                      <span className={`sm:text-right ${building ? 'text-ink-400' : badge.text}`}>
+                        {building ? '—' : Math.round(s.deviation_score)}
+                        {!building && <span className="hidden sm:inline"> / 100</span>}
                       </span>
                     </div>
                   );

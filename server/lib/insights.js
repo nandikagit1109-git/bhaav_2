@@ -106,6 +106,22 @@ export function fallbackInsight({ score, direction, previousFeedback, supportLev
     };
   }
 
+  // Low confidence ⇒ the deviation number is heavily dampened toward 0,
+  // so a low score here means "not measured confidently yet", NOT
+  // "measured and found calm". Never pick calm/feature copy from a
+  // low-confidence number — say softly that the signal is still building.
+  const confidence = typeof score?.confidence === "number" ? score.confidence : 1;
+  if (confidence < 0.3) {
+    const remaining = score.sessions_until_full_confidence;
+    return {
+      observation: "Your rhythm is still coming into focus — Bhaav is listening more than interpreting right now.",
+      suggestion: Number.isFinite(remaining)
+        ? `Write about ${remaining} more ordinary session${remaining === 1 ? "" : "s"} and the comparison against your own baseline gets sharper.`
+        : "Write a few more ordinary sessions so Bhaav can learn what normal looks like for you.",
+      source: "fallback",
+    };
+  }
+
   // Choose base copy based on direction
   let base;
   if (score.deviation < 0.8) {
@@ -152,6 +168,11 @@ export function insightPrompt(payload) {
   const dataSummary = {
     // Current session vs baseline
     sessionDeviation: score?.deviation,
+    // Raw (undamped) signal + confidence, reported separately from the
+    // dampened deviation so a low number isn't read as "no change".
+    rawCombinedZ: score?.raw_combined_z ?? null,
+    confidence: score?.confidence ?? null,
+    sessionsUntilFullConfidence: score?.sessions_until_full_confidence ?? null,
     dominantFeature: score?.dominantFeature,
     zScores: score?.zScores,
 
@@ -190,6 +211,9 @@ IMPORTANT: The "direction" field tells you whether changes are concerning (worse
 - If direction.overall is "concerning", note the specific concern honestly but gently.
 - If direction.overall is "mixed", acknowledge both the shifts and what's stayed steady.
 - If direction.overall is "neutral" or deviation is low, focus on consistency.
+- If confidence is below 0.3, do NOT claim the rhythm was steady, calm, or unchanged — the
+  number is dampened by low confidence, not measured calm. Instead say the signal is still
+  building and suggest a few more ordinary sessions.
 
 Session duration context: The baselineSessionDurationMinutes is the user's typical session length.
 The currentSessionDurationMinutes is this week's average. Shorter sessions can indicate lower

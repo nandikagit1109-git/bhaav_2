@@ -10,7 +10,7 @@ import { campusAggregate, weekStart, HIGH_DEVIATION } from "./stats.js";
 import { generateInsight } from "../lib/insights.js";
 import { assertUserId } from "./validate.js";
 import { sanitizeSession } from "../lib/validate.js";
-import { buildBaseline, scoreSession, scoreSmoothed, summarizeDirection } from "../lib/baseline.js";
+import { buildBaseline, scoreSession, scoreSmoothed, summarizeDirection, baselineConfidence, sessionsUntilFullConfidence } from "../lib/baseline.js";
 import { seedDatabase } from "./seed.js";
 import { initCache, getCachedBaseline, setCachedBaseline, invalidateBaseline, invalidateAllBaselines, closeCache } from "./cache.js";
 import {
@@ -197,6 +197,10 @@ export async function createApp(database) {
       const sessions = await sessionsFor(database, userId);
       const baseline = await getBaselineCached(database, userId, sessions);
       const latest = sessions.at(-1) || null;
+      // Score the latest session to expose the RAW signal and confidence
+      // separately from the dampened deviation (confidence < 0.3 means the
+      // UI must say "Building confidence", not "0 / 100").
+      const latestScore = latest ? scoreSession(latest, baseline) : null;
       const insights = await database.all(
         "SELECT * FROM insights WHERE user_id = $1 ORDER BY created_at DESC",
         [userId],
@@ -217,6 +221,11 @@ export async function createApp(database) {
         recoveryCode,
         settings: await settingsFor(database, userId),
         baseline,
+        // How far (raw, undamped) and how sure (confidence) — kept separate
+        // so a low-confidence score is never read as "measured, no deviation".
+        raw_combined_z: latestScore?.raw_combined_z ?? null,
+        confidence: latestScore?.confidence ?? baselineConfidence(baseline),
+        sessions_until_full_confidence: sessionsUntilFullConfidence(baseline),
         sessions,
         latest,
         insight: latestInsight
@@ -587,24 +596,6 @@ export async function createApp(database) {
     }
   });
 
-  // ── SPA fallback — serve index.html for any non-API route ──────
-  const indexPath = path.join(clientDist, "index.html");
-  try {
-    const { default: fs } = await import("node:fs");
-    if (fs.existsSync(indexPath)) {
-      app.get("*", (req, res) => {
-        if (req.path.startsWith("/api")) {
-          return res.status(404).json({ error: "Not found" });
-        }
-        res.sendFile(indexPath);
-      });
-    }
-  } catch { /* no-op */ }
-
-  app.use((err, _req, res, _next) => {
-    res.status(500).json({ error: "Unexpected error" });
-  });
-
   // ── Campus Pulse: per-user opt-in (anonymous user) ─────────────
   app.post("/api/settings/campus-pulse-opt-in", generalWriteRateLimit, async (req, res) => {
     try {
@@ -675,6 +666,27 @@ export async function createApp(database) {
     } catch (error) {
       res.status(error.status || 500).json({ error: error.status ? error.message : "Peer count unavailable" });
     }
+  });
+
+  // ── SPA fallback — serve index.html for any non-API route ──────
+  // MUST stay registered AFTER every real API route: Express matches
+  // routes in registration order, and this wildcard 404s any /api path
+  // it sees first (it was previously shadowing the peer-count route).
+  const indexPath = path.join(clientDist, "index.html");
+  try {
+    const { default: fs } = await import("node:fs");
+    if (fs.existsSync(indexPath)) {
+      app.get("*", (req, res) => {
+        if (req.path.startsWith("/api")) {
+          return res.status(404).json({ error: "Not found" });
+        }
+        res.sendFile(indexPath);
+      });
+    }
+  } catch { /* no-op */ }
+
+  app.use((err, _req, res, _next) => {
+    res.status(500).json({ error: "Unexpected error" });
   });
 
   return app;

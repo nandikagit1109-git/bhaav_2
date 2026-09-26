@@ -39,7 +39,11 @@ function CustomTooltip({ active, payload }) {
       <div className="eyebrow">{dateStr}</div>
       <div className="flex justify-between items-baseline mt-2">
         <span className="text-ink-500">Distance</span>
-        <span className="font-mono font-medium text-ink-950">{Math.round(data.deviation_score)} / 100</span>
+        <span className="font-mono font-medium text-ink-950">
+          {/* Below 0.3 confidence the score is dampened — a number here
+              would read as "measured, found normal". */}
+          {data.building ? 'Building confidence' : `${Math.round(data.deviation_score)} / 100`}
+        </span>
       </div>
       <div className="flex justify-between mt-1">
         <span className="text-ink-500">Speed</span>

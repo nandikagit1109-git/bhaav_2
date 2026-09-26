@@ -210,6 +210,43 @@ const FEATURE_WEIGHTS = {
   correctionRate: 0.6,
 };
 
+// ── Confidence ──────────────────────────────────────────────────────────────
+
+/**
+ * Number of sessions beyond MIN_BASELINE_SESSIONS for confidence to ramp 0 → 1.
+ */
+const CONFIDENCE_RAMP_SESSIONS = 10;
+
+/**
+ * How confident we are in the baseline (0 → 1).
+ *
+ * Starts at 0 when the baseline just became ready (exactly
+ * MIN_BASELINE_SESSIONS sessions) and reaches 1 after
+ * CONFIDENCE_RAMP_SESSIONS more sessions.
+ *
+ * This is reported SEPARATELY from raw_combined_z so the API can
+ * distinguish "measured and found normal" from "not measured
+ * confidently yet" — the two must never collapse into one number.
+ *
+ * @param {object} baseline - baseline object from buildBaseline()
+ * @returns {number} confidence in [0, 1]
+ */
+export function baselineConfidence(baseline) {
+  const count = baseline?.sessionCount ?? 0;
+  return Math.max(0, Math.min(1, (count - MIN_BASELINE_SESSIONS) / CONFIDENCE_RAMP_SESSIONS));
+}
+
+/**
+ * Sessions still needed before confidence reaches 1.
+ *
+ * @param {object} baseline - baseline object from buildBaseline()
+ * @returns {number} sessions remaining (0 when fully confident)
+ */
+export function sessionsUntilFullConfidence(baseline) {
+  const count = baseline?.sessionCount ?? 0;
+  return Math.max(0, MIN_BASELINE_SESSIONS + CONFIDENCE_RAMP_SESSIONS - count);
+}
+
 /**
  * Score a single session against the baseline.
  *
@@ -227,6 +264,11 @@ export function scoreSession(session, baseline) {
     return {
       ready: false,
       deviation: null,
+      // Not measurable yet — report confidence explicitly instead of
+      // letting a missing deviation read as "no deviation".
+      raw_combined_z: null,
+      confidence: round(baselineConfidence(baseline), 3),
+      sessions_until_full_confidence: sessionsUntilFullConfidence(baseline),
       zScores: {},
       dominantFeature: null,
       highDeviation: false,
@@ -263,8 +305,11 @@ export function scoreSession(session, baseline) {
     ? Math.sqrt(allRelevant.reduce((s, z) => s + z * z, 0) / allRelevant.length)
     : 0;
 
-  // Confidence dampening: scale by how established the baseline is
-  const confidence = Math.min(1, (baseline.sessionCount - MIN_BASELINE_SESSIONS) / 10);
+  // Confidence dampening: scale by how established the baseline is.
+  // confidence is ALSO reported on its own (baselineConfidence) so a
+  // score dampened toward 0 by low confidence is never mistaken for
+  // "measured, found normal".
+  const confidence = baselineConfidence(baseline);
   const dampenedDeviation = combinedZ * confidence;
 
   // Find dominant feature (largest concerning z-score)
@@ -284,7 +329,12 @@ export function scoreSession(session, baseline) {
     zScores,
     dominantFeature,
     highDeviation: dampenedDeviation >= HIGH_DEVIATION,
-    // Expose raw combinedZ and confidence for explainability
+    // Raw (undamped) signal + confidence, reported separately so clients
+    // can show "Building confidence" instead of a misleading 0.
+    raw_combined_z: round(combinedZ, 3),
+    confidence: round(confidence, 3),
+    sessions_until_full_confidence: sessionsUntilFullConfidence(baseline),
+    // Legacy aliases — kept for existing tests/consumers
     _rawCombinedZ: round(combinedZ, 3),
     _confidence: round(confidence, 3),
   };
@@ -331,6 +381,9 @@ export function scoreSmoothed(sessions, baseline) {
     return {
       ready: false,
       deviation: null,
+      raw_combined_z: null,
+      confidence: round(baselineConfidence(baseline), 3),
+      sessions_until_full_confidence: sessionsUntilFullConfidence(baseline),
       zScores: {},
       dominantFeature: null,
       highDeviation: false,

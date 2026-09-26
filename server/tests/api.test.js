@@ -143,3 +143,49 @@ test("weekly insight works without API key", async () => {
     assert.doesNotMatch(body.observation, /500|undefined|stack/i);
   });
 });
+
+test("peer-count route responds instead of hitting the SPA-fallback 404", async () => {
+  await withServer(async (url, _db, _token, headers) => {
+    const userId = headers["x-bhaav-user"];
+    const res = await fetch(`${url}/api/campus-pulse/peer-count/${userId}`, { headers });
+    assert.equal(res.status, 200, "peer-count must not be shadowed by the SPA-fallback wildcard");
+    const body = await res.json();
+    assert.ok("opted_in" in body);
+
+    // …while the SPA fallback must still 404 genuinely unknown API paths.
+    const missing = await fetch(`${url}/api/no-such-route`, { headers });
+    assert.equal(missing.status, 404);
+  });
+});
+
+test("state and session evaluation expose confidence separately from deviation", async () => {
+  await withServer(async (url, _db, _token, headers) => {
+    const stateRes = await fetch(`${url}/api/state`, { headers });
+    const state = await stateRes.json();
+    assert.equal(stateRes.status, 200);
+    assert.ok(typeof state.confidence === "number");
+    assert.ok(state.confidence >= 0 && state.confidence <= 1);
+    assert.ok(typeof state.sessions_until_full_confidence === "number");
+    assert.ok("raw_combined_z" in state, "raw (undamped) z must be reported on its own");
+
+    const sessionRes = await fetch(`${url}/api/sessions`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        typingSpeed: 42.8,
+        meanPauseMs: 842,
+        pauseStdDevMs: 311,
+        correctionRate: 0.073,
+        timingVariance: 0.184,
+        sessionDuration: 642,
+      }),
+    });
+    const session = await sessionRes.json();
+    assert.equal(sessionRes.status, 200);
+    assert.ok(typeof session.confidence === "number");
+    assert.ok(typeof session.raw_combined_z === "number");
+    assert.ok(typeof session.sessions_until_full_confidence === "number");
+    // Dampened deviation can never exceed the raw signal.
+    assert.ok(session.raw_combined_z >= session.deviation - 0.01);
+  });
+});

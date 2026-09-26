@@ -67,7 +67,12 @@ export default function JournalPage({ onNavigateToDashboard }) {
       // Privacy purge: words exist only until this moment.
       setJournalContent('');
       setIsWritingActive(false);
-      if (res.evaluation?.deviationScore >= 55) {
+      // Only fire on a score that was actually measured with confidence.
+      // Below 0.3 confidence the deviation is dampened — a number there
+      // means "not measured confidently yet", not "this needs support".
+      const ev = res.evaluation || {};
+      const confidentEnough = typeof ev.confidence !== 'number' || ev.confidence >= 0.3;
+      if (confidentEnough && (ev.deviationScore ?? 0) >= 55) {
         setShowSupportCard(true);
       }
     } catch (err) {
@@ -97,8 +102,17 @@ export default function JournalPage({ onNavigateToDashboard }) {
   /* ————————————————————————— RESULT: NOTICE ————————————————————————— */
   if (sessionResult) {
     const ev = sessionResult.evaluation || {};
-    const headline = resultHeadline(Number(ev.deviationScore ?? 0));
     const learning = ev.status === 'learning';
+    // Baseline is ready but confidence < 0.3: the dampened score would
+    // display as "0 / 100", which wrongly reads as "measured, found normal".
+    const building = !learning && typeof ev.confidence === 'number' && ev.confidence < 0.3;
+    const headline = building
+      ? {
+          line1: 'Still',
+          line2: 'coming into focus.',
+          note: 'Your baseline exists, but confidence is still building — a low number right now would mean "not measured yet", not "no change".',
+        }
+      : resultHeadline(Number(ev.deviationScore ?? 0));
 
     return (
       <div className="max-w-3xl mx-auto pt-32 sm:pt-40 pb-24">
@@ -136,7 +150,7 @@ export default function JournalPage({ onNavigateToDashboard }) {
               <h1 className="text-display-section font-serif text-ink-950 mt-6">
                 {headline.line1}
                 <br />
-                <span className={Number(ev.deviationScore ?? 0) >= 35 ? 'italic text-accent-pop' : ''}>
+                <span className={building || Number(ev.deviationScore ?? 0) >= 35 ? 'italic text-accent-pop' : ''}>
                   {headline.line2}
                 </span>
               </h1>
@@ -163,7 +177,10 @@ export default function JournalPage({ onNavigateToDashboard }) {
                 </div>
                 <div className="flex flex-wrap items-center justify-between gap-x-10 gap-y-2 mt-10 pt-6 border-t border-stone-border/70">
                   <span className="eyebrow">
-                    Rhythm deviation <span className="text-ink-950 ml-1">{ev.deviationScore ?? 0} / 100</span>
+                    Rhythm deviation{' '}
+                    <span className="text-ink-950 ml-1">
+                      {building ? 'Building confidence' : `${ev.deviationScore ?? 0} / 100`}
+                    </span>
                   </span>
                   <span className="eyebrow">
                     Baseline sessions <span className="text-ink-950 ml-1">{ev.sessionsRecorded ?? 0}</span>
