@@ -1,6 +1,8 @@
 # Render Blueprint — Bhaav Backend
-# Deploy with: render blueprint deploy
-# Or connect the GitHub repo in the Render dashboard and use this file.
+# Deploy: Render dashboard → New → Blueprint → connect this GitHub repo.
+# Creates a free web service (bhaav-api) + free Postgres (bhaav-db).
+# The server runs idempotent migrations on boot and seeds demo data when
+# the database is empty, so no manual migration step is needed.
 
 services:
   # ── Backend API ────────────────────────────────────────────────
@@ -12,34 +14,26 @@ services:
     buildCommand: npm install
     startCommand: node src/index.js
     healthCheckPath: /api/health
+    autoDeployTrigger: commit
     envVars:
       - key: DATABASE_URL
         fromDatabase:
           name: bhaav-db
           property: connectionString
-      - key: REDIS_URL
-        fromRedis:
-          name: bhaav-cache
-          property: connectionString
       - key: CLIENT_ORIGIN
-        value: https://bhaav.vercel.app
-      - key: ANTHROPIC_API_KEY
-        sync: false  # Set manually in Render dashboard
+        value: https://bhaav-2.vercel.app
       - key: NODE_ENV
         value: production
       - key: DEMO_SEED
-        value: true
+        value: "true"
+      - key: ANTHROPIC_API_KEY
+        sync: false  # Optional: set in the Render dashboard for AI insights
 
 # ── PostgreSQL Database ──────────────────────────────────────────
 databases:
   - name: bhaav-db
     plan: free
     databaseName: bhaav
-    ipAllowList: []  # Only internal connections (same region)
-
-# ── Redis Cache ──────────────────────────────────────────────────
-# Render's managed Redis (free tier: 25MB)
-redis:
-  - name: bhaav-cache
-    plan: free
-    ipAllowList: []
+    # No ipAllowList → Render default (open to authenticated connections).
+    # pg.js connects over TLS with rejectUnauthorized:false, so no extra
+    # CA config is needed.
