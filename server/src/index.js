@@ -682,6 +682,12 @@ export async function createApp(database) {
         }
         res.sendFile(indexPath);
       });
+    } else {
+      // API-only deploy (Render): the built SPA lives on Vercel, so the bare
+      // root would otherwise be Express's unfriendly "Cannot GET /" 404.
+      app.get("/", (_req, res) => {
+        res.redirect("https://bhaav-2.vercel.app");
+      });
     }
   } catch { /* no-op */ }
 
